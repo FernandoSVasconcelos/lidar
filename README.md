@@ -1,6 +1,6 @@
 # Veloview scripting
 
-Veloview Python algorithm that:
+Veloview Python script that:
 - Coads VLP-16 calibration file
 - Connects to the ethernet port
 - Capture the point cloud
