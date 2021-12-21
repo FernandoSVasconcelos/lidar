@@ -1,4 +1,4 @@
-# lidar
+# Veloview scripting
 
 Veloview Python algorithm that:
 - Coads VLP-16 calibration file
