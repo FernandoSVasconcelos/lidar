@@ -1,13 +1,13 @@
 import paraview.simple as smp
 import time
 
-PATH = '/home/ubuntu/Downloads/new_csv/cap'
+PATH = '/home/ubuntu/Downloads/lidar/new_csv/cap'
 
 def capture():
     print("Starting Capture")
     path_jetson = '/mnt/SSD/temp/lidar/cap' 
     
-    vv.saveCSVCurrentFrame("/home/ubuntu/Downloads/teste.csv")
+    vv.saveCSVCurrentFrame("/home/ubuntu/Downloads/lidar/teste.csv")
     for i in range(10):
         vv.saveCSVCurrentFrame(PATH + str(i) + '.csv')
 
