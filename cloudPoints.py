@@ -212,9 +212,9 @@ def find_files():
 	return lidar_files
 
 if __name__ == '__main__':
-	raw_points = pd.read_csv('new_csv/cap33.csv')
-	filtered_df = filtro(raw_points)
-	points = slam([filtered_df], [[0,0], [0,0]], [[0,0,0], [0,0,0]])
+	raw_points = pd.read_csv('new_csv/cap21.csv')
+	#filtered_df = filtro(raw_points)
+	points = slam([raw_points], [[0,0], [0,0]], [[0,0,0], [0,0,0]])
 	generate_mesh(points)
 	'''files = find_files()
 	for file in files:
