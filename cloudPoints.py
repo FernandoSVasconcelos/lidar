@@ -191,20 +191,20 @@ def save2dPoints2CSV(path : str, name : str, points : List[float]) -> None:
 	csv.to_csv(path + name)
  
 def filtro(raw_points):
-    new_df = []
-    for index, row in raw_points.iterrows():
-        if row['intensity'] > 0 :
-            #row['Points_m_XYZ:2'] += 30
-            new_df.append(row)
-    new_df = pd.DataFrame(new_df)
-    frames = [raw_points, new_df]
-    return new_df
+	new_df = []
+	for index, row in raw_points.iterrows():
+		if (row['intensity'] < 10) and (row['Points_m_XYZ:2'] > 6):
+			if (abs(row['Points_m_XYZ:0']) > 5) and (abs(row['Points_m_XYZ:0']) < 20):
+				if (abs(row['Points_m_XYZ:1']) > 5) and (abs(row['Points_m_XYZ:1']) < 50):
+					new_df.append(row)
+	new_df = pd.DataFrame(new_df)
+	return new_df
 
 def find_files():
 	from os import listdir
 	from os.path import isfile, join
 	lidar_files = []
-	onlyfiles = [f for f in listdir('/home/ubuntu/Downloads/new_csv/') if isfile(join('/home/ubuntu/Downloads/new_csv/', f))]
+	onlyfiles = [f for f in listdir('/home/ubuntu/Downloads/lidar/new_csv/') if isfile(join('/home/ubuntu/Downloads/lidar/new_csv/', f))]
 	for file in onlyfiles:
 		if 'csv' in file:
 			lidar_files.append(file)
@@ -212,16 +212,14 @@ def find_files():
 	return lidar_files
 
 if __name__ == '__main__':
-
-	#points = slam([pd.read_csv('/mnt/SSD/Source/main/process/utils/reuse-data/lidar/2021-06-11.10:15:11.572066.velodyne.csv')], [[0,0], [0,0]], [[0,0,0], [0,0,0]])
-	'''raw_points = pd.read_csv('cap1.csv')
+	raw_points = pd.read_csv('new_csv/cap33.csv')
 	filtered_df = filtro(raw_points)
 	points = slam([filtered_df], [[0,0], [0,0]], [[0,0,0], [0,0,0]])
-	generate_mesh(points)'''
-	files = find_files()
+	generate_mesh(points)
+	'''files = find_files()
 	for file in files:
 		try:
-			raw_points = pd.read_csv(f"/home/ubuntu/Downloads/new_csv/{file}")
+			raw_points = pd.read_csv(f"/home/ubuntu/Downloads/lidar/new_csv/{file}")
 			if raw_points is not None:
 				#os.system(f"eog lidar_teste/2021121415/{file.split('.')[0]}.camera.jpg")
 				
@@ -231,4 +229,4 @@ if __name__ == '__main__':
 				generate_mesh(points)
 				
 		except Exception as e:
-			print(e)
+			print(e)'''

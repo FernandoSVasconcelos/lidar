@@ -7,7 +7,6 @@ def capture():
     print("Starting Capture")
     path_jetson = '/mnt/SSD/temp/lidar/cap' 
     
-    vv.saveCSVCurrentFrame("/home/ubuntu/Downloads/lidar/teste.csv")
     for i in range(10):
         vv.saveCSVCurrentFrame(PATH + str(i) + '.csv')
 
@@ -99,4 +98,5 @@ def openSensor():
 def main():
     openSensor()
     capture()
+    
 main()

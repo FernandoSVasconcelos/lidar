@@ -3,12 +3,11 @@ import os
 import pyautogui
 from multiprocessing.pool import ThreadPool
 
-def applogic():
+def applogic() -> None:
     os.system("/home/ubuntu/Downloads/VeloView-4.1.3-Linux-64bit/bin/VeloView --script=/home/ubuntu/Downloads/lidar/new_applogic.py ")
     
-
-def press_key():
-    time.sleep(5)
+def press_key() -> None:
+    time.sleep(3)
     pyautogui.press('f8')
     time.sleep(2)
     pyautogui.typewrite('capture()')
