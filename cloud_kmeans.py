@@ -53,70 +53,96 @@ def kmeans(new_data):
     return new_data
 
 def getDistancia(data, max_index):
-    new_data = data[data.cluster == max_index]
+    try:
+        new_data = data[data.cluster == max_index]
 
-    desvio_X = new_data['Points_m_XYZ:0'].std()
-    desvio_Y = new_data['Points_m_XYZ:1'].std()
-    desvio_Z = new_data['Points_m_XYZ:2'].std()
-    print(f"Desvio padrão em X: {desvio_X:.2f}")
-    print(f"desvio padrão em Y: {desvio_Y:.2f}")
-    print(f"desvio padrão em Z: {desvio_Z:.2f}")
+        desvio_X = new_data['Points_m_XYZ:0'].std()
+        desvio_Y = new_data['Points_m_XYZ:1'].std()
+        desvio_Z = new_data['Points_m_XYZ:2'].std()
 
-    print('---------------------------------------------------------')
+        media_X = new_data['Points_m_XYZ:0'].mean()
+        media_Y = new_data['Points_m_XYZ:1'].mean()
+        media_Z = new_data['Points_m_XYZ:2'].mean()
 
-    media_X = new_data['Points_m_XYZ:0'].mean()
-    media_Y = new_data['Points_m_XYZ:1'].mean()
-    media_Z = new_data['Points_m_XYZ:2'].mean()
+        distancia = abs(media_X) + abs(media_Y) + abs(media_Z)
+        print(f"Distância: {distancia:.2f} metros")
 
-    print(f"Media em X: {media_X:.2f}")
-    print(f"Media em Y: {media_Y:.2f}")
-    print(f"Media em Z: {media_Z:.2f}")
-
-    distancia = abs(media_X) + abs(media_Y) + abs(media_Z)
-    print(f"Distância: {distancia:.2f} metros")
-
-    print('---------------------------------------------------------')
-    return distancia
+        print('---------------------------------------------------------')
+        return distancia
+    except Exception as e:
+        print(f"Sem dados: {e}")
 
 def getAltura(data, max_index):
-    new_data = data[data.cluster == max_index]
+    try:
+        new_data = data[data.cluster == max_index]
 
-    my_max = new_data['Points_m_XYZ:2'].loc[new_data['Points_m_XYZ:2'].idxmax()]
-    my_min = new_data['Points_m_XYZ:2'].loc[new_data['Points_m_XYZ:2'].idxmin()]
+        my_max = new_data['Points_m_XYZ:2'].loc[new_data['Points_m_XYZ:2'].idxmax()]
+        my_min = new_data['Points_m_XYZ:2'].loc[new_data['Points_m_XYZ:2'].idxmin()]
 
-    print(f"Max: {my_max:.2f}")
-    print(f"Min: {my_min:.2f}")
-    if(my_min < 0):
-        altura = abs(my_max) + abs(my_min)
-    else:
-        altura = abs(my_max) - abs(my_min)
+        if(my_min < 0):
+            altura = abs(my_max) + abs(my_min)
+        else:
+            altura = abs(my_max) - abs(my_min)
 
 
-    print(f"Altura: {altura:.2f} metros")
-    print('---------------------------------------------------------')
-    return altura
+        print(f"Altura: {altura:.2f} metros")
+        print('---------------------------------------------------------')
+        return altura
+    except Exception as e:
+        print(f"Sem dados: {e}")
 
 def getClusterSize(data):
-    cluster = []
+    try:
+        cluster = []
 
-    for i in range(4):
-        cluster.append(data[data.cluster == i].shape[0])
-        print(f"Tamanho do cluster {i}: {cluster[i]}")
+        for i in range(4):
+            cluster.append(data[data.cluster == i].shape[0])
+            print(f"Tamanho do cluster {i}: {cluster[i]}")
 
-    max_value = max(cluster)
-    max_index = cluster.index(max_value)
-    print('---------------------------------------------------------')
-    return max_index
+        max_value = max(cluster)
+        max_index = cluster.index(max_value)
+        print('---------------------------------------------------------')
+        return max_index
+    except Exception as e:
+        print(f"Sem dados: {e}")
 
-def main():
-    data = pd.read_csv("new_csv/cap21.csv")
-    data = filtro(data)
+def getQuadrante(data, side):
+    try:
+        if(side == 'top-rigth'):
+            aux_data = (data[data['Points_m_XYZ:0'] > 0])
+            new_data = (aux_data[aux_data['Points_m_XYZ:1'] > 0])
+        elif(side == 'top-left'):
+            aux_data = (data[data['Points_m_XYZ:0'] < 0])
+            new_data = (aux_data[aux_data['Points_m_XYZ:1'] > 0])
+        elif(side == 'bottom-rigth'):
+            aux_data = (data[data['Points_m_XYZ:0'] > 0])
+            new_data = (aux_data[aux_data['Points_m_XYZ:1'] < 0])
+        elif(side == 'bottom-left'):
+            aux_data = (data[data['Points_m_XYZ:0'] < 0])
+            new_data = (aux_data[aux_data['Points_m_XYZ:1'] < 0])
+        return new_data
+    except Exception as e:
+        print(f"Sem dados: {e}")
+
+def main(path, quadrante):
+    data = pd.read_csv(path)
+    #data = filtro(data)
     new_data = data[['Points_m_XYZ:0', 'Points_m_XYZ:1', 'Points_m_XYZ:2']].copy()
 
     processed_data = kmeans(new_data)
+    processed_data = getQuadrante(processed_data, quadrante)
+
     max_index = getClusterSize(processed_data)
     distancia = getDistancia(processed_data, max_index)
     altura = getAltura(processed_data, max_index)
 
+    try:
+        processed_data = kmeans(processed_data)
+    except Exception as e:
+        print(f"Sem dados: {e}")
+    
+    return distancia, altura
+
 if __name__ == '__main__':
-    main()
+    path = "new_csv/cap21.csv"
+    main(path, 'top-left')
