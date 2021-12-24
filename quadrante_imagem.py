@@ -26,9 +26,9 @@ def getQuadrante(image, center):
     if(center[0] == 0) and (center[1] == 0):
         quadrante = 'Null'
     elif(center[0] > mid_width) and (center[1] > mid_height):
-        quadrante = 'top-rigth'
+        quadrante = 'top-right'
     elif(center[0] > mid_width) and (center[1] < mid_height):
-        quadrante = 'bottom-rigth'
+        quadrante = 'bottom-right'
     elif(center[0] < mid_width) and (center[0] > mid_height):
         quadrante = 'top-left'
     elif(center[0] < mid_width) and (center[0] < mid_height):

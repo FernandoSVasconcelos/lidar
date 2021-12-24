@@ -103,13 +103,13 @@ def getClusterSize(data):
 
 def getQuadrante(data, side):
     try:
-        if(side == 'top-rigth'):
+        if(side == 'top-right'):
             aux_data = (data[data['Points_m_XYZ:0'] > 0])
             new_data = (aux_data[aux_data['Points_m_XYZ:1'] > 0])
         elif(side == 'top-left'):
             aux_data = (data[data['Points_m_XYZ:0'] < 0])
             new_data = (aux_data[aux_data['Points_m_XYZ:1'] > 0])
-        elif(side == 'bottom-rigth'):
+        elif(side == 'bottom-right'):
             aux_data = (data[data['Points_m_XYZ:0'] > 0])
             new_data = (aux_data[aux_data['Points_m_XYZ:1'] < 0])
         elif(side == 'bottom-left'):
