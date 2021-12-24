@@ -70,6 +70,7 @@ if __name__ == '__main__':
     newMain = Main()
     newMain.image = '20211210121331.camera.jpg'
     newMain.box = [[10, 10, 100, 100],[20, 20, 200, 200]]
+    newMain.box = -1
     newMain.center = quadrante_imagem.getCenter(newMain.box)
     newMain.quadrante = quadrante_imagem.getQuadrante(newMain.image, newMain.center)
 
@@ -77,8 +78,8 @@ if __name__ == '__main__':
     print('---------------------------------------------------------')
     newMain.distancia, newMain.altura, newMain.pointCloud = cloud_kmeans.main("new_csv/cap35.csv", newMain.quadrante)
 
-    print(f"Altura: {newMain.altura:.2f}")
-    print(f"Distancia: {newMain.distancia:.2f}")
+    print(f"Altura: {newMain.altura:.2f} metros")
+    print(f"Distancia: {newMain.distancia:.2f} metros")
     print('---------------------------------------------------------')
     print(f"Cloud Points processado:\n{newMain.pointCloud}")
     

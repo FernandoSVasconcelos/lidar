@@ -1,6 +1,8 @@
 import cv2
 
 def getCenter(box):
+    if(box == -1):
+        return [0, 0]
     x_minimo = abs(int(box[0][0] - (box[0][2] / 2)))
     if (x_minimo - 15) >= 0:
         x_minimo = x_minimo - 15
@@ -21,7 +23,9 @@ def getQuadrante(image, center):
     mid_height = height / 2
     mid_width = width / 2
     
-    if(center[0] > mid_width) and (center[1] > mid_height):
+    if(center[0] == 0) and (center[1] == 0):
+        quadrante = 'Null'
+    elif(center[0] > mid_width) and (center[1] > mid_height):
         quadrante = 'top-rigth'
     elif(center[0] > mid_width) and (center[1] < mid_height):
         quadrante = 'bottom-rigth'

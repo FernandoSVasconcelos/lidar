@@ -65,9 +65,7 @@ def getDistancia(data, max_index):
         media_Z = new_data['Points_m_XYZ:2'].mean()
 
         distancia = abs(media_X) + abs(media_Y) + abs(media_Z)
-        print(f"Distância: {distancia:.2f} metros")
 
-        print('---------------------------------------------------------')
         return distancia
     except Exception as e:
         print(f"Sem dados: {e}")
@@ -84,9 +82,6 @@ def getAltura(data, max_index):
         else:
             altura = abs(my_max) - abs(my_min)
 
-
-        print(f"Altura: {altura:.2f} metros")
-        print('---------------------------------------------------------')
         return altura
     except Exception as e:
         print(f"Sem dados: {e}")
@@ -120,6 +115,8 @@ def getQuadrante(data, side):
         elif(side == 'bottom-left'):
             aux_data = (data[data['Points_m_XYZ:0'] < 0])
             new_data = (aux_data[aux_data['Points_m_XYZ:1'] < 0])
+        elif(side == 'Null'):
+            new_data = data
         return new_data
     except Exception as e:
         print(f"Sem dados: {e}")
