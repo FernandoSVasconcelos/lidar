@@ -1,13 +1,11 @@
 import cloud_kmeans
 import quadrante_imagem
 import cv2
+import pandas as pd
 
 class Main:
     def __init__(self) -> None:
-        self._image = ''
-        self._box = []
-        self._center = []
-        self._quadrante = ''
+        pass
 
     @property
     def image(self):
@@ -57,6 +55,14 @@ class Main:
     def distancia(self, distancia):
         self._distancia = distancia
 
+    @property
+    def pointCloud(self):
+        return self._pointCloud
+
+    @pointCloud.setter
+    def pointCloud(self, pointCloud):
+        self._pointCloud = pointCloud
+
     def __str__(self) -> str:
         return f"Quadrante: {self._quadrante}\nCentro: {self.center}"
 
@@ -69,5 +75,10 @@ if __name__ == '__main__':
 
     print(newMain)
     print('---------------------------------------------------------')
-    newMain.distancia, newMain.altura = cloud_kmeans.main("new_csv/cap35.csv", newMain.quadrante)
+    newMain.distancia, newMain.altura, newMain.pointCloud = cloud_kmeans.main("new_csv/cap35.csv", newMain.quadrante)
+
+    print(f"Altura: {newMain.altura:.2f}")
+    print(f"Distancia: {newMain.distancia:.2f}")
+    print('---------------------------------------------------------')
+    print(f"Cloud Points processado:\n{newMain.pointCloud}")
     

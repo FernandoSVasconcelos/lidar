@@ -16,13 +16,18 @@ def getCenter(box):
     return [x_medio, y_medio]
 
 def getQuadrante(image, center):
-    if(center[0] > 0) and (center[1] > 0):
+    height = image.shape[0]
+    width = image.shape[1]
+    mid_height = height / 2
+    mid_width = width / 2
+    
+    if(center[0] > mid_width) and (center[1] > mid_height):
         quadrante = 'top-rigth'
-    elif(center[0] > 0) and (center[1] < 0):
+    elif(center[0] > mid_width) and (center[1] < mid_height):
         quadrante = 'bottom-rigth'
-    elif(center[0] < 0) and (center[0] > 0):
+    elif(center[0] < mid_width) and (center[0] > mid_height):
         quadrante = 'top-left'
-    elif(center[0] < 0) and (center[0] < 0):
+    elif(center[0] < mid_width) and (center[0] < mid_height):
         quadrante = 'bottom-left'
     return quadrante
 

@@ -141,7 +141,7 @@ def main(path, quadrante):
     except Exception as e:
         print(f"Sem dados: {e}")
     
-    return distancia, altura
+    return distancia, altura, processed_data
 
 if __name__ == '__main__':
     path = "new_csv/cap21.csv"
