@@ -136,14 +136,14 @@ def rotateAxisZ(points : List[float], th : float) -> List[float]:
 
 def slam(df : Dict, gps : List[str], giroscopio : List[str]) -> List[float]:
 	if(len(df) == 1):
-		xs = df[0]['Points_m_XYZ:0'].to_numpy()
-		ys = df[0]['Points_m_XYZ:1'].to_numpy()
-		zs = df[0]['Points_m_XYZ:2'].to_numpy()
+		xs = df[0]['X'].to_numpy()
+		ys = df[0]['X'].to_numpy()
+		zs = df[0]['Z'].to_numpy()
 		return map(list, zip(xs, ys, zs))
 
-	xs = df[0]['Points_m_XYZ:0'].to_numpy()
-	ys = df[0]['Points_m_XYZ:1'].to_numpy()
-	zs = df[0]['Points_m_XYZ:2'].to_numpy()
+	xs = df[0]['X'].to_numpy()
+	ys = df[0]['X'].to_numpy()
+	zs = df[0]['Z'].to_numpy()
 	
 	points : List[float] = []
 	points.append(list(zip(xs, ys, zs)))
@@ -193,9 +193,9 @@ def save2dPoints2CSV(path : str, name : str, points : List[float]) -> None:
 def filtro(raw_points):
 	new_df = []
 	for index, row in raw_points.iterrows():
-		if (row['intensity'] < 10) and (row['Points_m_XYZ:2'] > 6):
-			if (abs(row['Points_m_XYZ:0']) > 5) and (abs(row['Points_m_XYZ:0']) < 20):
-				if (abs(row['Points_m_XYZ:1']) > 5) and (abs(row['Points_m_XYZ:1']) < 50):
+		if (row['reflectivity'] < 10) and (row['Z'] > 4):
+			if (abs(row['X']) > 5) and (abs(row['X']) < 20):
+				if (abs(row['X']) > 5) and (abs(row['X']) < 50):
 					new_df.append(row)
 	new_df = pd.DataFrame(new_df)
 	return new_df
@@ -212,8 +212,8 @@ def find_files():
 	return lidar_files
 
 if __name__ == '__main__':
-	raw_points = pd.read_csv('new_csv/cap21.csv')
-	#filtered_df = filtro(raw_points)
+	raw_points = pd.read_csv('new_csv/20211210121705.lidar.csv')
+	filtered_df = filtro(raw_points)
 	points = slam([raw_points], [[0,0], [0,0]], [[0,0,0], [0,0,0]])
 	generate_mesh(points)
 	'''files = find_files()

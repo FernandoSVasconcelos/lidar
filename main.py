@@ -49,6 +49,14 @@ class Main:
         self._altura = altura
 
     @property
+    def largura(self):
+        return self._largura
+
+    @largura.setter
+    def largura(self, largura):
+        self._largura = largura
+
+    @property
     def distancia(self):
         return self._distancia
 
@@ -83,5 +91,4 @@ if __name__ == '__main__':
     print(f"Altura: {newMain.altura:.2f} metros")
     print(f"Distancia: {newMain.distancia:.2f} metros")
     print('---------------------------------------------------------')
-    print(f"Cloud Points processado:\n{newMain.pointCloud}")
     
