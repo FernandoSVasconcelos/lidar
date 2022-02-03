@@ -193,10 +193,9 @@ def save2dPoints2CSV(path : str, name : str, points : List[float]) -> None:
 def filtro(raw_points):
 	new_df = []
 	for index, row in raw_points.iterrows():
-		if (row['reflectivity'] < 10) and (row['Z'] > 4):
-			if (abs(row['X']) > 5) and (abs(row['X']) < 20):
-				if (abs(row['X']) > 5) and (abs(row['X']) < 50):
-					new_df.append(row)
+		if (row['reflectivity'] < 10):
+			if ((abs(row['X']) > 1) and (row['Y'] > 0) and (row['Y'] < 7)) or ((abs(row['X']) > 3) and (row['Y'] > 7)):
+				new_df.append(row)
 	new_df = pd.DataFrame(new_df)
 	return new_df
 
@@ -212,7 +211,7 @@ def find_files():
 	return lidar_files
 
 if __name__ == '__main__':
-	raw_points = pd.read_csv('new_csv/20211210121705.lidar.csv')
+	raw_points = pd.read_csv('new_csv/20211210121631.lidar.csv')
 	filtered_df = filtro(raw_points)
 	points = slam([raw_points], [[0,0], [0,0]], [[0,0,0], [0,0,0]])
 	generate_mesh(points)
