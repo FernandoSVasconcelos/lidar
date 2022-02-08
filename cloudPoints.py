@@ -41,7 +41,7 @@ def generate_mesh(points : List[float]) -> None:
 	dec_mesh.remove_non_manifold_edges()
 	'''
 
-	o3d.visualization.draw_geometries([pcd], point_show_normal = True)
+	o3d.visualization.draw_geometries([pcd])
 
 def __isInsideRange(azimuth : float, range : List[float], distance : float, max_distance) -> bool:
     if(range[0] > range[1]):  # Caso de volta passando pelo angulo 0
@@ -137,12 +137,12 @@ def rotateAxisZ(points : List[float], th : float) -> List[float]:
 def slam(df : Dict, gps : List[str], giroscopio : List[str]) -> List[float]:
 	if(len(df) == 1):
 		xs = df[0]['X'].to_numpy()
-		ys = df[0]['X'].to_numpy()
+		ys = df[0]['Y'].to_numpy()
 		zs = df[0]['Z'].to_numpy()
 		return map(list, zip(xs, ys, zs))
 
 	xs = df[0]['X'].to_numpy()
-	ys = df[0]['X'].to_numpy()
+	ys = df[0]['Y'].to_numpy()
 	zs = df[0]['Z'].to_numpy()
 	
 	points : List[float] = []
@@ -194,8 +194,7 @@ def filtro(raw_points):
 	new_df = []
 	for index, row in raw_points.iterrows():
 		if (row['reflectivity'] < 10):
-			if ((abs(row['X']) > 1) and (row['Y'] > 0) and (row['Y'] < 7)) or ((abs(row['X']) > 3) and (row['Y'] > 7)):
-				new_df.append(row)
+			new_df.append(row)
 	new_df = pd.DataFrame(new_df)
 	return new_df
 
@@ -211,7 +210,7 @@ def find_files():
 	return lidar_files
 
 if __name__ == '__main__':
-	raw_points = pd.read_csv('new_csv/20211210121631.lidar.csv')
+	raw_points = pd.read_csv("fevereiro/20220201175111/20220201175219655670.lidar.csv")
 	filtered_df = filtro(raw_points)
 	points = slam([raw_points], [[0,0], [0,0]], [[0,0,0], [0,0,0]])
 	generate_mesh(points)

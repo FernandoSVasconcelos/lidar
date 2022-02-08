@@ -3,20 +3,22 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from sklearn.cluster import KMeans
+import cloudPoints
 
 pd.options.mode.chained_assignment = None
 
 def filtro(raw_points):
     new_df = []
+    media_z = raw_points['Z'].mean()
+    desvio_z = raw_points['Z'].std()
     for index, row in raw_points.iterrows():
-         if (row['reflectivity'] > 230) and (row['Y'] > 0):   
+         if (row['reflectivity'] > 101) and (row['Y'] > 0) and (row['Z'] > media_z + desvio_z) and abs(row['X'] < 30):   
             new_df.append(row)
                     
     new_df = pd.DataFrame(new_df)
     return new_df
 
 def kmeans(new_data, N_CLUSTERS):
-
     X = new_data.iloc[:, 0:3].values
     data_list = []
     colors = ['red', 'green', 'blue', 'yellow', 'black', 'orange', 'purple', 'brown']
@@ -29,7 +31,12 @@ def kmeans(new_data, N_CLUSTERS):
     for i in range(N_CLUSTERS):
         data_list.append(new_data[new_data.cluster == i])
 
-    kplot = plt.axes(projection='3d')
+    raw_points = new_data
+    filtered_df = filtro(raw_points)
+    points = cloudPoints.slam([raw_points], [[0,0], [0,0]], [[0,0,0], [0,0,0]])
+    cloudPoints.generate_mesh(points)
+
+    '''kplot = plt.axes(projection='3d')
 
     for i in range(N_CLUSTERS):
         kplot.scatter3D(data_list[i]['X'], data_list[i]['Y'], data_list[i]['Z'], c=f'{colors[i]}', label = f'Cluster {i}')
@@ -39,18 +46,23 @@ def kmeans(new_data, N_CLUSTERS):
     kplot.set_ylabel('$Y$', fontsize=20, rotation=0)
     kplot.set_zlabel('$Z$', fontsize=20, rotation=0)
     
-    plt.scatter(k_means_optimum.cluster_centers_[:,0], k_means_optimum.cluster_centers_[:,1], color = 'indigo', s = 200)
+    plt.scatter(k_means_optimum.cluster_centers_[:,0], k_means_optimum.cluster_centers_[:,1], color = 'indigo', s = 101)
     plt.legend()
     plt.title("Kmeans")
-    plt.show()
+    plt.show()'''
     return new_data
 
 def getDistancia(data, max_index):
     new_data = data[data.cluster == max_index]
     try:
-        distancia = new_data['Y'].loc[new_data['Y'].idxmin()]
+        x = new_data['X'].loc[new_data['X'].abs().idxmin()]
+        y = new_data['Y'].loc[new_data['Y'].abs().idxmin()]
+        z = new_data['Z'].loc[new_data['Z'].abs().idxmin()]
 
-        return abs(distancia)
+        root = x**2 + y**2 + z**2
+        distancia = math.sqrt(root)
+
+        return (distancia)
     except Exception as e:
         print(f"Sem dados: {e}")
 
@@ -62,16 +74,9 @@ def getAltura(data, max_index):
         media = new_data['Z'].mean()
         desvio = new_data['Z'].std()
         variancia = math.sqrt(desvio)
-        print(f'Desvio: {desvio}')
-        print(f'Variância: {variancia}')
         altura = my_max - media
         if(desvio > 1):
             altura = altura / variancia
-        
-        '''if(my_min < 0):
-            altura = abs(my_max) + abs(my_min)
-        else:
-            altura = abs(my_max) - abs(my_min)'''
 
         return altura
     except Exception as e:
@@ -120,8 +125,10 @@ def wire_compare(processed_data):
     res = []
     new_df = processed_data
     drop_index = []
+    media_z = new_df['Z'].mean()
+    desvio_z = new_df['Z'].std()
     for index, row in processed_data.iterrows():
-        if (row['reflectivity'] > 230) and (row['Y'] > 0):
+        if (row['reflectivity'] > 101) and (row['Y'] > 0) and (row['Z'] > media_z + desvio_z) and abs(row['X'] < 30):
             res.append(row)
             drop_index.append(index)
     print(f"Há {len(res)} possíveis pontos do fio no quadrante da árvore.")
@@ -210,7 +217,6 @@ def deleta_discrepantes(data, N_CLUSTERS):
         for index, row in data_clusters[k].iterrows():
             for line in x_remove:
                 if line == row.X:
-                    #print(index)
                     try:
                         data_clusters[k] = data_clusters[k].drop(index)
                     except:
@@ -243,17 +249,31 @@ def deleta_verticais(data, N_CLUSTERS):
     new_data = pd.concat(data_clusters)
     return new_data
 
+def get_Filter(raw_points):
+    new_df = []
+    media_z = raw_points.Z.mean()
+    desvio_z = raw_points.Z.std()
+    for index, row in raw_points.iterrows():
+         if (row['X'] < 5) and (row['Z'] > media_z + desvio_z):   
+            new_df.append(row)
+                    
+    new_df = pd.DataFrame(new_df)
+    print(new_df.Z.mean())
+    print(new_df.reflectivity.mean())
+    return new_df
+
 def main(path, quadrante):
     data = pd.read_csv(path)
     #----------------------Filtro---------------------------
     new_data = data[['X', 'Y', 'Z', 'reflectivity']].copy()
-    #new_data = new_data[data.Y > 0]
     #########################################################
     #-------------------1º Kmeans----------------------------
     processed_data = kmeans(new_data, 5)
     processed_data = getQuadrante(new_data, quadrante)
     filtered_data = filtro(processed_data)
     #########################################################
+    #teste_df = get_Filter(new_data)
+    #teste_df = kmeans(teste_df, 5)
     #-------------------2º Kmeans----------------------------
     res, processed_data = wire_compare(processed_data)
     try:
@@ -285,6 +305,7 @@ def main(path, quadrante):
             dist_compare(filtered_data, processed_data, max_index)
         except:
             print('Sem fios detectados na captura!')
+            print('---------------------------------------------------------')
     except Exception as e:
         print(f"Sem dados no quadrante: {e}")
         return None, None, None
@@ -292,7 +313,7 @@ def main(path, quadrante):
     return distancia, altura, processed_data
 
 if __name__ == '__main__':
-    path = "fevereiro/20220201175111/20220201175322034931.lidar.csv"
+    path = "new_csv/20211210121705.lidar.csv"
     quadrante = 'top-left'
 
     distancia, altura, _ = main(path, quadrante)
