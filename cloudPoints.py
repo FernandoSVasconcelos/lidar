@@ -26,6 +26,8 @@ def generate_image(points : List[float], path : str) -> None:
 def generate_mesh(points : List[float]) -> None:
 	pcd = o3d.geometry.PointCloud()
 	pcd.points = o3d.utility.Vector3dVector(points)
+	mesh_frame = o3d.geometry.TriangleMesh.create_coordinate_frame(size=10)
+	mesh_frame.translate([0, 0, 0])
 	
 	'''
 	pcd.estimate_normals(fast_normal_computation=True)
@@ -41,7 +43,7 @@ def generate_mesh(points : List[float]) -> None:
 	dec_mesh.remove_non_manifold_edges()
 	'''
 
-	o3d.visualization.draw_geometries([pcd])
+	o3d.visualization.draw_geometries([pcd, mesh_frame])
 
 def __isInsideRange(azimuth : float, range : List[float], distance : float, max_distance) -> bool:
     if(range[0] > range[1]):  # Caso de volta passando pelo angulo 0
