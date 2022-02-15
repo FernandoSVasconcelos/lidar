@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from sklearn.cluster import KMeans
+from sklearn import linear_model
 import cloudPoints
 
 pd.options.mode.chained_assignment = None
@@ -18,7 +19,7 @@ def filtro(raw_points):
     print('---------------------------------------------------------')
 
     for _, row in raw_points.iterrows():
-         if (row['reflectivity'] > 101) and (row['Z'] > corte_z) and abs(row['X'] < corte_x):   
+         if  (row['Z'] > corte_z) and (abs(row['X']) < corte_x):   
             new_df.append(row)         
     new_df = pd.DataFrame(new_df)
     return new_df
@@ -54,10 +55,7 @@ def kmeans(new_data, N_CLUSTERS):
     return new_data
 
 def getDistancia(processed_data, max_index):
-    distX = []
-    distY = []
-    distZ = []
-    distT = []
+    distX, distY, distZ, distT = [], [], [], []
     new_data = processed_data[processed_data.cluster == max_index]
     try:
         for _, row in new_data.iterrows():
@@ -91,8 +89,7 @@ def getAltura(data, max_index):
         print('xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx')
 
 def getClusterSize(data, N_CLUSTERS):
-    list_stdX = []
-    list_stdY = []
+    list_stdX, list_stdY = [], []
     try:
         for i in range(N_CLUSTERS):
             new_data = data[data.cluster == i]
@@ -127,36 +124,12 @@ def getQuadrante(data, side):
         print(f"Sem dados: {e}")
         print('xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx')
 
-def wire_compare(processed_data):
-    res = []
-    drop_index = []
-    new_df = processed_data
-    corte_z = (abs(new_df['Z'].mean())) + (math.sqrt(abs(new_df['Z'].std())))
-    corte_x = (abs(new_df['X'].mean())) + (abs(new_df['X'].std()))
-
-    for index, row in processed_data.iterrows():
-        if (row['reflectivity'] > 101) and (row['Z'] > corte_z) and abs(row['X'] < corte_x):
-            res.append(row)
-            drop_index.append(index)
-    print(f"Há {len(res)} possíveis pontos de um possível fio no quadrante da árvore.")
-    print('---------------------------------------------------------')
-    for index in drop_index:
-        new_df = new_df.drop(index)
-    return  new_df
-
 def dist_compare(filtered_data, processed_data, max_index):
-    distX = []
-    distY = []
-    distZ = []
-    distT = []
-    x = []
-    y = []
-    z = []
+    distX, distY, distZ, distT = [], [], [], []
+    x, y, z = [], [], []
 
     new_data = processed_data[processed_data.cluster == max_index]
-    x1 = new_data['X']
-    y1 = new_data['Y']
-    z1 = new_data['Z']
+    x1, y1, z1 = new_data['X'], new_data['Y'], new_data['Z']
 
     for _, row in filtered_data.iterrows():
         distX.append(abs(x1 - row.X))
@@ -187,8 +160,7 @@ def deleta_discrepantes(data, N_CLUSTERS):
     new_data = pd.DataFrame()
 
     for k in range(N_CLUSTERS):
-        x = []
-        x_remove = []
+        x, x_remove = [], []
         dif_x = 0
 
         data_clusters.append(data[data.cluster == k])
@@ -246,14 +218,13 @@ def deleta_verticais(data, N_CLUSTERS):
     new_data = pd.concat(data_clusters)
     return new_data
 
-def soma10(df, filtered_data):
-    filtered_data['Z'] = filtered_data['Z'] + 15
-    new_df = pd.concat([df, filtered_data])
+def soma10(df, new_filtered_data):
+    new_filtered_data['Z'] = new_filtered_data['Z'] + 15
+    new_df = pd.concat([df, new_filtered_data])
     new_df = plot(new_df)
 
 def find_tree(data, N_CLUSTERS):
-    list_alt = []
-    list_index = []
+    list_alt, list_index = [], []
     try:
         for i in range(N_CLUSTERS):
             new_data = data[data.cluster == i]
@@ -487,21 +458,62 @@ def find_tree(data, N_CLUSTERS):
         print(f"Sem dados: {e}")
         print('xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx')
 
+def ransac(filtered_data):
+    X = filtered_data['X'].to_numpy().reshape(-1, 1)
+    y = filtered_data['Y'].to_numpy().reshape(-1, 1)
+    ransac = linear_model.RANSACRegressor(residual_threshold = 0.5)
+    ransac.fit(X, y)
+    inlier_mask = ransac.inlier_mask_
+    outlier_mask = np.logical_not(inlier_mask)
+
+    line_X = np.arange(X.min(), X.max())[:, np.newaxis]
+    line_y_ransac = ransac.predict(line_X)
+
+    lw = 2
+    plt.scatter(
+        X[inlier_mask], y[inlier_mask], color="yellowgreen", marker=".", label="Inliers"
+    )
+    plt.scatter(
+        X[outlier_mask], y[outlier_mask], color="gold", marker=".", label="Outliers"
+    )
+
+    plt.plot(line_X, line_y_ransac, color="cornflowerblue", linewidth=lw, label="RANSAC regressor",)
+    plt.legend(loc="lower right")
+    plt.xlabel("Input")
+    plt.ylabel("Response")
+    plt.show()
+
+    X = X[inlier_mask]
+    y= y[inlier_mask]
+    X = list(X.flat)
+    y = list(y.flat)
+    zipado = zip(X, y)
+    new_df = (filtered_data[filtered_data[['X','Y']].apply(tuple,1).isin(zipado)])
+    soma10(filtered_data, new_df)
+
+    return new_df
+
 def main(path, quadrante):
     #-----------------------Corte----------------------------
     data = pd.read_csv(path)
     new_data = data[['X', 'Y', 'Z', 'reflectivity']].copy()
     new_data = new_data[new_data.Y.abs() <= 40]
+    #new_data = new_data[new_data.Y > 1.5]
+    corte_x = (abs(new_data['X'].mean())) + (abs(new_data['X'].std()))
+    new_data = new_data[new_data.X.abs() <= corte_x] #7
+    #corte_z = (abs(new_data['Z'].mean())) + (math.sqrt(abs(new_data['Z'].std())))
+    #new_data = new_data[new_data.Z.abs() <= corte_z]
     #########################################################
     #-------------------1º Kmeans----------------------------
-    processed_data = kmeans(new_data, 5)
+    processed_data = kmeans(new_data, N_CLUSTERS = 5)
     processed_data = getQuadrante(new_data, quadrante)
     filtered_data = filtro(processed_data)
+    filtered_data = ransac(filtered_data)
+    processed_data = processed_data[~processed_data['X'].isin(list(filtered_data.X))]
     #########################################################
     #-------------------2º Kmeans----------------------------
-    processed_data = wire_compare(processed_data)
     try:
-        processed_data = kmeans(processed_data, 8)
+        processed_data = kmeans(processed_data, N_CLUSTERS = 8)
         list_tree = find_tree(processed_data, N_CLUSTERS = 8)
     except Exception as e:
         print('xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx')
@@ -517,7 +529,7 @@ def main(path, quadrante):
                 print(f"Sem fios no quadrante da árvore!")
                 print('---------------------------------------------------------')
             else:
-                filtered_data = kmeans(filtered_data, 5)
+                filtered_data = kmeans(filtered_data, N_CLUSTERS = 8)
         else:
             print('xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx')
             print(f"Sem dados filtrados!")
@@ -527,7 +539,8 @@ def main(path, quadrante):
         print(f"Sem dados filtrados: {e}")
         print('xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx')
     #########################################################
-    soma10(new_data, filtered_data)
+    new_filtered_data = filtered_data.copy()
+    soma10(new_data, new_filtered_data)
     #-------------------------Cálculos-----------------------
     max_index = getClusterSize(processed_data, N_CLUSTERS = 8)
     if list_tree:
@@ -538,8 +551,9 @@ def main(path, quadrante):
     else:
         max_index = max_index[0]
     print(f"Cluster Selecionado: {max_index}")
-    soma10(new_data, processed_data[processed_data.cluster == max_index])
-    #processed_data[processed_data.cluster == max_index].to_csv('/home/ubuntu/Downloads/filtro.csv')
+    new_processed = processed_data[processed_data.cluster == max_index].copy()
+    soma10(new_data, new_processed)
+    #filtered_data.to_csv('/home/ubuntu/Downloads/filtro.csv')
     print('---------------------------------------------------------')
     try:
         distancia = getDistancia(processed_data, max_index)
@@ -558,11 +572,18 @@ def main(path, quadrante):
     return distancia, altura, processed_data
 
 if __name__ == '__main__':
-    #path = "fevereiro/20220201175111/20220201181545322832.lidar.csv"
-    path = "fevereiro/20220201175111/20220201181508435555.lidar.csv"
+
+    #path = "fevereiro/20220201175111/20220201180811633471.lidar.csv"
+    path = "fevereiro/20220201175111/20220201175345536167.lidar.csv"
     #path = "fevereiro/20220201175111/20220201181259479249.lidar.csv"
+    #path = "fevereiro/20220201175111/20220201181538282397.lidar.csv"
+    #path = "fevereiro/20220201175111/20220201175523926785.lidar.csv"
+    #path = "fevereiro/20220201175111/20220201175846172005.lidar.csv"
     quadrante = 'top-left'
+    #path = "new_csv/20211210122052.lidar.csv"  #parede com árvore
     #path = "fevereiro/20220201175111/20220201181314067145.lidar.csv"
+    #path = "fevereiro/20220201175111/20220201175609659564.lidar.csv"
+    #path = "fevereiro/20220201175111/20220201175946943503.lidar.csv"
     #quadrante = 'top-right'
     distancia, altura, _ = main(path, quadrante)
 
