@@ -13,12 +13,12 @@ def filtro(raw_points):
     corte_z = (abs(raw_points['Z'].mean())) + (math.sqrt(abs(raw_points['Z'].std())))
     corte_x = (abs(raw_points['X'].mean())) + (abs(raw_points['X'].std()))
 
-    print('---------------------------------------------------------')
-    print(f"Limiar de corte em Z: {corte_z:.2f} metros")
-    print(f"Limiar de corte em X: {corte_x:.2f} metros")
-    print('---------------------------------------------------------')
+    print('----------------------[filtro]------------------------------')
+    print(f"-> Limiar de corte em Z: {corte_z:.2f} metros")
+    print(f"-> Limiar de corte em X: {corte_x:.2f} metros")
+    print('------------------------------------------------------------')
     for _, row in raw_points.iterrows():
-         if (row['Z'] > corte_z) and (abs(row['X']) < corte_x):   
+         if (row['Z'] > -1) and (row['Z'] < 4) and (abs(row['X']) < 5) and (row['Y'] > 7) and (row['Y'] < 16):   
             new_df.append(row)
     return pd.DataFrame(new_df)
 
@@ -43,9 +43,9 @@ def getDistancia(processed_data, max_index):
             distT.append(math.sqrt(distX[i]**2 + distY[i]**2 + distZ[i]**2))
         return (min(distT))
     except Exception as e:
-        print('xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx')
+        print('xxxxxxxxxxxxxxxxxxx[getDistancia]xxxxxxxxxxxxxxxxxxxxxxxxxx')
         print(f"Sem dados: {e}")
-        print('xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx')
+        print('xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxXXxxxxxxxxxxxxxxxxxxxxx')
 
 def getAltura(data, max_index):
     new_data = data[data.cluster == max_index]
@@ -55,24 +55,25 @@ def getAltura(data, max_index):
             altura = altura / math.sqrt(new_data['Z'].std())
         return altura
     except Exception as e:
-        print('xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx')
+        print('xxxxxxxxxxxxxxxxxxx[getAltura]xxxxxxxxxxxxxxxxxxxxxxxxxxx')
         print(f"Sem dados: {e}")
         print('xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx')
 
 def getClusterSize(data, N_CLUSTERS):
     list_stdX, list_stdY = [], []
+    print('----------------------[getClusterSize]-----------------------------')
     try:
         for i in range(N_CLUSTERS):
             list_stdX.append(data[data.cluster == i]['X'].std())
             list_stdY.append(data[data.cluster == i]['Y'].std())
-        print(f"Maiores Clusters por desvio em X: {np.argsort(list_stdX)[::-1][:N_CLUSTERS]}")
-        print(f"Maiores Clusters por desvio em Y: {np.argsort(list_stdY)[::-1][:N_CLUSTERS]}")
+        print(f"-> Maiores Clusters por desvio em X: {np.argsort(list_stdX)[::-1][:N_CLUSTERS]}")
+        print(f"-> Maiores Clusters por desvio em Y: {np.argsort(list_stdY)[::-1][:N_CLUSTERS]}")
         print('---------------------------------------------------------')
         return np.argsort(list_stdX)[::-1][:N_CLUSTERS]
     except Exception as e:
-        print('xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx')
+        print('xxxxxxxxxxxxxxxxxxxxx[getClusterSize]xxxxxxxxxxxxxxxxxxxxxxxxx')
         print(f"Sem dados: {e}")
-        print('xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx')
+        print('xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx')
 
 def getQuadrante(data, side):
     try:
@@ -87,9 +88,9 @@ def getQuadrante(data, side):
         elif(side == 'Null'):
             return data
     except Exception as e:
-        print('xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx')
+        print('xxxxxxxxxxxxxxxxxxx[getQuadrante]xxxxxxxxxxxxxxxxxxxxxxxxx')
         print(f"Sem dados: {e}")
-        print('xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx')
+        print('xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx')
 
 def dist_compare(filtered_data, processed_data, max_index):
     distX, distY, distZ, distT = [], [], [], []
@@ -110,14 +111,15 @@ def dist_compare(filtered_data, processed_data, max_index):
             z.append(values)
     for i in range(len(x)):
         distT.append(math.sqrt(x[i]**2 + y[i]**2 + z[i]**2))
+    print('-----------------------[dist_compare]---------------------------')
     if(min(distT) == 0):
-        print(f"O fio está em contato com a árvore!")
+        print(f"-> O fio está em contato com a árvore!")
     else:
         if(min(distT) < 1):
-            print(f"A distância mínima entre um possível contato entre fio e árvore é de {min(distT)*100:.2f} centímetros.")
+            print(f"-> A distância mínima entre um possível contato entre fio e árvore é de {min(distT)*100:.2f} centímetros.")
         else:
-            print(f"A distância mínima entre um possível contato entre fio e árvore é de {min(distT):.2f} metros.")
-    print('---------------------------------------------------------')
+            print(f"-> A distância mínima entre um possível contato entre fio e árvore é de {min(distT):.2f} metros.")
+    print('----------------------------------------------------------------')
     return min(distT)
 
 def deleta_discrepantes(data, N_CLUSTERS):
@@ -175,7 +177,7 @@ def deleta_verticais(data, N_CLUSTERS):
     return pd.concat(data_clusters)
 
 def soma10(df, new_filtered_data):
-    new_filtered_data['Z'] = new_filtered_data['Z'] + 15
+    new_filtered_data['Z'] = new_filtered_data['Z'] + 10
     plot(pd.concat([df, new_filtered_data]))
 
 def find_tree(data, N_CLUSTERS):
@@ -405,18 +407,19 @@ def find_tree(data, N_CLUSTERS):
                 list_index.append(i)
                 continue
             #--------------------------------------------------------------------
-        print(f"Possíveis clusters: {list_index}")
-        print('---------------------------------------------------------')
+        print('--------------------[find_tree]-----------------------------')
+        print(f"-> Possíveis clusters: {list_index}")
+        print('------------------------------------------------------------')
         return list_index
     except Exception as e:
-        print('xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx')
+        print('xxxxxxxxxxxxxxxxxxxx[find_tree]xxxxxxxxxxxxxxxxxxxxxxxxxxx')
         print(f"Sem dados: {e}")
-        print('xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx')
+        print('xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx')
 
 def ransac(filtered_data):
     X = filtered_data['X'].to_numpy().reshape(-1, 1)
     y = filtered_data['Y'].to_numpy().reshape(-1, 1)
-    ransac = linear_model.RANSACRegressor(residual_threshold = 0.5)
+    ransac = linear_model.RANSACRegressor(residual_threshold = 4.5)
     ransac.fit(X, y)
     inlier_mask = ransac.inlier_mask_
     outlier_mask = np.logical_not(inlier_mask)
@@ -435,15 +438,15 @@ def ransac(filtered_data):
 
     return (filtered_data[filtered_data[['X','Y']].apply(tuple,1).isin(zip(list(X[inlier_mask].flat), list(y[inlier_mask].flat)))])
 
-def trata_ransec(df):
-    N_CLUSTERS = 20
+def trata_ransac(df, N_CLUSTERS):
     new_df = kmeans(df, N_CLUSTERS)
     data_clusters, sizes = [], []
+    print('--------------------[trata_ransac]-----------------------------')
     try:
         for i in range(N_CLUSTERS):
             data_clusters.append(new_df[new_df.cluster == i])
             sizes.append(data_clusters[i].shape[0])
-        print(f"Maiores Clusters por tamanho: {np.argsort(sizes)}")
+        print(f"-> Maiores Clusters por tamanho: {np.argsort(sizes)}")
         for i in range(N_CLUSTERS//2):
             for index, row in data_clusters[i].iterrows():
                 if row.cluster == i:
@@ -454,23 +457,23 @@ def trata_ransec(df):
         print('---------------------------------------------------------')
         return pd.concat(data_clusters)
     except Exception as e:
-        print('xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx')
+        print('xxxxxxxxxxxxxxxxxxxxxxx[trata_ransac]xxxxxxxxxxxxxxxxxxxxxxxxxxx')
         print(f"Sem dados: {e}")
-        print('xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx')
+        print('xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx')
 
 def main(path, quadrante):
     #-----------------------Corte----------------------------
     data = pd.read_csv(path)
     new_data = data[['X', 'Y', 'Z', 'reflectivity']].copy()
     new_data = new_data[new_data.Y.abs() <= 40]
-    new_data = new_data[new_data.Z > 0]
     new_data = new_data[new_data.X.abs() <= (abs(new_data['X'].mean())) + (abs(new_data['X'].std()))] #7
     #########################################################
     #-------------------1º Kmeans----------------------------
     processed_data = kmeans(new_data, N_CLUSTERS = 6)
     processed_data = getQuadrante(new_data, quadrante)
     filtered_data = filtro(processed_data)
-    filtered_data = ransac(trata_ransec(filtered_data.copy()))
+    filtered_data = ransac(trata_ransac(filtered_data.copy(), N_CLUSTERS = 80))
+    print(filtered_data.sort_values('Y')) #1/x³
     processed_data = processed_data[~processed_data['X'].isin(list(filtered_data.X))]
     #########################################################
     #-------------------2º Kmeans----------------------------
@@ -478,7 +481,7 @@ def main(path, quadrante):
         processed_data = kmeans(processed_data, N_CLUSTERS = 8)
         list_tree = find_tree(processed_data, N_CLUSTERS = 8)
     except Exception as e:
-        print('xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx')
+        print('xxxxxxxxxxxxxxxxxxxxx[main]xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx')
         print(f"Sem dados processados: {e}")
         print('xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx')
     #########################################################
@@ -493,11 +496,11 @@ def main(path, quadrante):
             else:
                 filtered_data = kmeans(filtered_data, N_CLUSTERS = 8)
         else:
-            print('xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx')
+            print('xxxxxxxxxxxxxxxxxxxxx[main]xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx')
             print(f"Sem dados filtrados!")
             print('xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx')
     except Exception as e:
-        print('xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx')
+        print('xxxxxxxxxxxxxxxxxxxxx[main]xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx')
         print(f"Sem dados filtrados: {e}")
         print('xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx')
     #########################################################
@@ -511,24 +514,26 @@ def main(path, quadrante):
                 break
     else:
         max_index = max_index[0]
-    print(f"Cluster Selecionado: {max_index}")
+    print('---------------------[main]------------------------------')
+    print(f"-> Cluster Selecionado: {max_index}")
+    print('---------------------------------------------------------')
     soma10(new_data, processed_data[processed_data.cluster == max_index].copy())
 
     frames = [processed_data[processed_data.cluster == max_index].copy(), filtered_data]
     df = pd.concat(frames)
     soma10(new_data, df)
     #filtered_data.to_csv('/home/ubuntu/Downloads/filtro.csv')
-    print('---------------------------------------------------------')
     try:
         distancia = getDistancia(processed_data, max_index)
         altura = getAltura(processed_data, max_index)
         try:
             dist_compare(filtered_data, processed_data, max_index)
         except:
+            print('xxxxxxxxxxxxxxxxxxxxx[main]xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx')
             print('Sem fios detectados na captura!')
-            print('---------------------------------------------------------')
+            print('xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx')
     except Exception as e:
-        print('xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx')
+        print('xxxxxxxxxxxxxxxxxxxxx[main]xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx')
         print(f"Sem dados no quadrante: {e}")
         print('xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx')
         return None, None, None
@@ -537,15 +542,16 @@ def main(path, quadrante):
 
 if __name__ == '__main__':
 
-    path = "fevereiro/20220201175111/20220201180120779401.lidar.csv"
+    #path = "fevereiro/20220201175111/20220201181508435555.lidar.csv"
     #path = "fevereiro/20220201175111/20220201175345536167.lidar.csv"
     #path = "fevereiro/20220201175111/20220201181259479249.lidar.csv"
     #path = "fevereiro/20220201175111/20220201181538282397.lidar.csv"
     #path = "fevereiro/20220201175111/20220201175523926785.lidar.csv"
     #path = "fevereiro/20220201175111/20220201175846172005.lidar.csv"
     #quadrante = 'top-left'
-    #path = "new_csv/20211210122052.lidar.csv"  #parede com árvore
-    #path = "new_csv/20211210122052.lidar.csv"
+    path = "new_csv/20211210122052.lidar.csv"  #parede com árvore
+    #path = "new_csv/20211210121705.lidar.csv"
+    #path = "new_csv/20211210122007.lidar.csv"
     #path = "fevereiro/20220201175111/20220201181314067145.lidar.csv"
     #path = "fevereiro/20220201175111/20220201175609659564.lidar.csv"
     #path = "fevereiro/20220201175111/20220201175946943503.lidar.csv"
@@ -553,6 +559,7 @@ if __name__ == '__main__':
     distancia, altura, _ = main(path, quadrante)
 
     if distancia and altura:
-        print(f"Altura: {altura:.2f} metros")
-        print(f"Distancia: {distancia:.2f} metros")
-        print('---------------------------------------------------------')
+        print('-----------------------[__main__]---------------------------')
+        print(f"-> Altura: {altura:.2f} metros")
+        print(f"-> Distancia: {distancia:.2f} metros")
+        print('------------------------------------------------------------')
