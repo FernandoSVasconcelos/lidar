@@ -1,4 +1,4 @@
-from sklearn import linear_model, datasets
+from sklearn import linear_model
 from matplotlib import pyplot as plt
 import numpy as np
 import pandas as pd
