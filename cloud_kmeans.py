@@ -18,8 +18,12 @@ def filtro(raw_points):
     print(f"-> Limiar de corte em X: {corte_x:.2f} metros")
     print('------------------------------------------------------------')
     for _, row in raw_points.iterrows():
-         if (row['Z'] > -1) and (row['Z'] < 4) and (abs(row['X']) < 5) and (row['Y'] > 7) and (row['Y'] < 16):   
-            new_df.append(row)
+        if (2 < row['Y'] < 10):
+            if (-0.5 < row['Z'] < 3) and (3 < abs(row['X']) < 7):
+                new_df.append(row)
+        elif (10 < row['Y'] < 15):
+            if (-1.75 < row['Z'] < 4.5) and (3 < abs(row['X']) < 7):
+                new_df.append(row)  
     return pd.DataFrame(new_df)
 
 def plot(data):
@@ -472,8 +476,8 @@ def main(path, quadrante):
     processed_data = kmeans(new_data, N_CLUSTERS = 6)
     processed_data = getQuadrante(new_data, quadrante)
     filtered_data = filtro(processed_data)
-    filtered_data = ransac(trata_ransac(filtered_data.copy(), N_CLUSTERS = 80))
-    print(filtered_data.sort_values('Y')) #1/x³
+    filtered_data = ransac(filtered_data.copy())
+    #filtered_data = ransac(trata_ransac(filtered_data.copy(), N_CLUSTERS = 6))
     processed_data = processed_data[~processed_data['X'].isin(list(filtered_data.X))]
     #########################################################
     #-------------------2º Kmeans----------------------------
@@ -522,7 +526,6 @@ def main(path, quadrante):
     frames = [processed_data[processed_data.cluster == max_index].copy(), filtered_data]
     df = pd.concat(frames)
     soma10(new_data, df)
-    #filtered_data.to_csv('/home/ubuntu/Downloads/filtro.csv')
     try:
         distancia = getDistancia(processed_data, max_index)
         altura = getAltura(processed_data, max_index)
@@ -542,16 +545,74 @@ def main(path, quadrante):
 
 if __name__ == '__main__':
 
-    #path = "fevereiro/20220201175111/20220201181508435555.lidar.csv"
+    path = "fevereiro/20220201175111/20220201181508435555.lidar.csv"
     #path = "fevereiro/20220201175111/20220201175345536167.lidar.csv"
     #path = "fevereiro/20220201175111/20220201181259479249.lidar.csv"
     #path = "fevereiro/20220201175111/20220201181538282397.lidar.csv"
     #path = "fevereiro/20220201175111/20220201175523926785.lidar.csv"
     #path = "fevereiro/20220201175111/20220201175846172005.lidar.csv"
     #quadrante = 'top-left'
-    path = "new_csv/20211210122052.lidar.csv"  #parede com árvore
+    #path = "new_csv/20211210122052.lidar.csv"  #parede com árvore
     #path = "new_csv/20211210121705.lidar.csv"
     #path = "new_csv/20211210122007.lidar.csv"
+    #path = "new_csv/20211210121625.lidar.csv"
+    #path = "new_csv/20211210121658.lidar.csv"
+    #path = "new_csv/20211210122014.lidar.csv"
+    #path = "new_csv/20211210121351.lidar.csv"
+    #path = "new_csv/20220128165959963581.lidar.csv"
+    #path = "new_csv/20220128165810571231.lidar.csv"
+    path = "new_csv/20220128182056372078.lidar.csv"
+    #path = "new_csv/20220128182335600397.lidar.csv"
+    #path = "new_csv/20220128181445848581.lidar.csv"
+    #path = "new_csv/20220128182123391526.lidar.csv"
+    #path = "new_csv/20220128182109090682.lidar.csv"
+    #path = "new_csv/20220128181609837936.lidar.csv"
+    #path = "new_csv/20220128182412184428.lidar.csv"
+    #path = "new_csv/20220128165554190989.lidar.csv"
+    #path = "new_csv/20220128165725241408.lidar.csv"
+    #path = "new_csv/20220128181427055157.lidar.csv"
+    #path = "new_csv/20220128170057570395.lidar.csv"
+    #path = "new_csv/20220128170051700305.lidar.csv"
+    #path = "new_csv/20220128170044402196.lidar.csv"
+    #path = "new_csv/20220128170037952314.lidar.csv"
+    #path = "new_csv/20220128170019795662.lidar.csv"
+    #path = "new_csv/20220128165948409888.lidar.csv"
+    #path = "new_csv/20220128182441807807.lidar.csv"
+    #path = "new_csv/20220128182426344225.lidar.csv"
+    #path = "new_csv/20220128182418043611.lidar.csv"
+    #path = "new_csv/20220128182405693407.lidar.csv"
+    #path = "new_csv/20220128182357516042.lidar.csv"
+    #path = "new_csv/20220128182351043942.lidar.csv"
+    #path = "new_csv/20220128182342824927.lidar.csv"
+    #path = "new_csv/20220128182328695582.lidar.csv"
+    #path = "new_csv/20220128182315211751.lidar.csv"
+    #path = "new_csv/20220128182309047544.lidar.csv"
+    #path = "new_csv/20220128182256898757.lidar.csv"
+    #path = "new_csv/20220128182236330366.lidar.csv"
+    #path = "new_csv/20220128182230115372.lidar.csv"
+    #path = "new_csv/20220128182223900104.lidar.csv"
+    #path = "new_csv/20220128182209906049.lidar.csv"
+    #path = "new_csv/20220128182203188265.lidar.csv"
+    #path = "new_csv/20220128182156404349.lidar.csv"
+    #path = "new_csv/20220128182142073841.lidar.csv"
+    #path = "new_csv/20220128182135702661.lidar.csv"
+    #path = "new_csv/20220128182128244150.lidar.csv"
+    #path = "new_csv/20220128182115834742.lidar.csv"
+    #path = "new_csv/20220128181943620761.lidar.csv"
+    #path = "new_csv/20220128181937734234.lidar.csv"
+    #path = "new_csv/20220128181925050237.lidar.csv"
+    #path = "new_csv/20220128181918660275.lidar.csv"
+    #path = "new_csv/20220128181913143611.lidar.csv"
+    #path = "new_csv/20220128181845068014.lidar.csv"
+    #path = "new_csv/20220128181739100001.lidar.csv"
+    #path = "new_csv/20220128181711512810.lidar.csv"
+    #path = "new_csv/20220128181704055310.lidar.csv"
+    #path = "new_csv/20220128181629544648.lidar.csv"
+    #path = "new_csv/20220128181556152805.lidar.csv"
+    #path = "new_csv/20220128181528060718.lidar.csv"
+    #path = "new_csv/20220128181359051080.lidar.csv"
+    #path = "new_csv/20211210122125.lidar.csv"
+    path = "new_csv/20211210122119.lidar.csv"
     #path = "fevereiro/20220201175111/20220201181314067145.lidar.csv"
     #path = "fevereiro/20220201175111/20220201175609659564.lidar.csv"
     #path = "fevereiro/20220201175111/20220201175946943503.lidar.csv"
