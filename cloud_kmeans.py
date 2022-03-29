@@ -6,6 +6,7 @@ import numpy as np
 import pandas as pd
 from sklearn import linear_model
 from sklearn.cluster import KMeans
+import yaml
 
 pd.options.mode.chained_assignment = None
 
@@ -432,12 +433,15 @@ def main(path, quadrante):
         print(f"Sem dados filtrados: {e}")
         print('xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx')
     #########################################################
-    soma10(new_data, filtered_data.copy())
+    soma10(new_data.copy(), filtered_data.copy())
     #-------------------------Cálculos-----------------------
     try:
         dict_cluster = []
         list_tree = []
         potenciais_arvores = []
+        y_cluster = []
+        for i in range(8):
+            y_cluster.append(processed_data[processed_data.cluster == i]['Y'].mean())
         dist1 = 5 #distancia a ser determinada, para cluster de árvore próximo ao carro. Por exemplo, 5
         std_near = 1.1 # STD normalmente encontrado em árvores próximas ao carro
 
@@ -451,6 +455,7 @@ def main(path, quadrante):
                                 'STD_Value': max_str_tree[list(max_index).index(tree)],
                                 'DIST_Index': dist_tree_index.index(tree),
                                 'DIST_Value': dist_tree_value[dist_tree_index.index(tree)],
+                                'Y_mean': y_cluster[tree],
                                 'OVERALL': 0
                                 })
         for cluster in dict_cluster:
@@ -462,16 +467,18 @@ def main(path, quadrante):
 
             if cluster["STD_Value"] >= std_adapted:
                 #classifica como árvore
-                potenciais_arvores.append(cluster)
-                cluster["OVERALL"] = cluster["STD_Value"]**2 / cluster["DIST_Value"]
+                if cluster["Y_mean"] > 7:
+                    potenciais_arvores.append(cluster)
+                    cluster["OVERALL"] = cluster["STD_Value"]**2 / cluster["DIST_Value"]
             else:
                 cluster["OVERALL"] = -1
-            print(cluster)
+            #print(cluster)
+            print(yaml.dump(cluster, default_flow_style=False))
 
-        print("Potenciais árvores:")
+        print("------------------------------------Potenciais árvores----------------------------------")
         potenciais_arvores = sorted(potenciais_arvores, key=lambda d: d['OVERALL'], reverse = True) 
         for elemento in potenciais_arvores:
-            print(elemento)
+            print(yaml.dump(elemento, default_flow_style=False))
         max_index = potenciais_arvores[0]['Cluster']
             
         
@@ -480,20 +487,18 @@ def main(path, quadrante):
         max_index = max_index[0]
     print('---------------------[main]------------------------------')
     print(f"-> Cluster Selecionado: {max_index}")
-    print(f"Reflectividade média da árvore: {processed_data[processed_data.cluster == max_index]['reflectivity'].mean()}")
-    print(f"Reflectividade média do fio: {filtered_data['reflectivity'].mean()}")
     print('---------------------------------------------------------')
-    soma10(new_data, processed_data[processed_data.cluster == max_index].copy())
+    soma10(new_data.copy(), processed_data[processed_data.cluster == max_index].copy())
 
     frames = [processed_data[processed_data.cluster == max_index].copy(), filtered_data]
     df = pd.concat(frames)
-    soma10(new_data, df)
+    soma10(new_data.copy(), df.copy())
     try:
         distancia = getDistancia(processed_data, max_index)
         altura = getAltura(processed_data, max_index)
         try:
             contato = dist_compare(filtered_data, processed_data, max_index)
-            print(f'Distância de contato entre a árvore e o fio: {contato}.')
+            print(f'Distância de contato entre a árvore e o fio: {contato:.2f} metros.')
         except:
             print('xxxxxxxxxxxxxxxxxxxxx[main]xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx')
             print('Sem fios detectados na captura!')
