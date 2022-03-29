@@ -1,3 +1,4 @@
+import os
 import cloudPoints
 import math
 import matplotlib.pyplot as plt
@@ -73,7 +74,7 @@ def getClusterSize(data, N_CLUSTERS):
         print(f"-> Maiores Clusters por desvio em X: {np.argsort(list_stdX)[::-1][:N_CLUSTERS]}")
         print(f"-> Maiores Clusters por desvio em Y: {np.argsort(list_stdY)[::-1][:N_CLUSTERS]}")
         print('---------------------------------------------------------')
-        return np.argsort(list_stdX)[::-1][:N_CLUSTERS]
+        return np.argsort(list_stdX)[::-1][:N_CLUSTERS], sorted(list_stdX, reverse = True)
     except Exception as e:
         print('xxxxxxxxxxxxxxxxxxxxx[getClusterSize]xxxxxxxxxxxxxxxxxxxxxxxxx')
         print(f"Sem dados: {e}")
@@ -115,70 +116,7 @@ def dist_compare(filtered_data, processed_data, max_index):
             z.append(values)
     for i in range(len(x)):
         distT.append(math.sqrt(x[i]**2 + y[i]**2 + z[i]**2))
-    print('-----------------------[dist_compare]---------------------------')
-    if(min(distT) == 0):
-        print(f"-> O fio está em contato com a árvore!")
-    else:
-        if(min(distT) < 1):
-            print(f"-> A distância mínima entre um possível contato entre fio e árvore é de {min(distT)*100:.2f} centímetros.")
-        else:
-            print(f"-> A distância mínima entre um possível contato entre fio e árvore é de {min(distT):.2f} metros.")
-    print('----------------------------------------------------------------')
     return min(distT)
-
-def deleta_discrepantes(data, N_CLUSTERS):
-    data_clusters = []
-
-    for k in range(N_CLUSTERS):
-        x, x_remove = [], []
-        dif_x = 0
-        data_clusters.append(data[data.cluster == k])
-        data_clusters[k] = data_clusters[k].sort_values('Z')
-
-        for index, row in data_clusters[k].iterrows():
-            x.append(row['X'])
-        i = 0
-        while i < len(x):
-            try:
-                if i > 0:
-                    dif_x = abs(x[i] - x[i - 1])
-                    if dif_x > data_clusters[k].X.std():
-                        x_remove.append(x[i])
-                        x.pop(i)
-                    else:
-                        i += 1
-                else:
-                    i += 1      
-            except:
-                break
-        for index, row in data_clusters[k].iterrows():
-            for line in x_remove:
-                if line == row.X:
-                    try:
-                        data_clusters[k] = data_clusters[k].drop(index)
-                    except:
-                        pass
-    return pd.concat(data_clusters)
-
-def deleta_verticais(data, N_CLUSTERS):
-    data_clusters = []
-    for k in range(N_CLUSTERS):
-        try:
-            data_clusters.append(data[data.cluster == k])
-            data_clusters[k] = data_clusters[k].sort_values('Z')
-            xb = data_clusters[k]['X'].iloc[-1]
-            xa = data_clusters[k]['X'].iloc[0]
-            yb = data_clusters[k]['Y'].iloc[-1]
-            ya = data_clusters[k]['Y'].iloc[0]
-            zb = data_clusters[k]['Z'].iloc[-1]
-            za = data_clusters[k]['Z'].iloc[0]
-            d1 = (xb - xa)**2 + (yb - ya)**2
-            d2 = (zb - za)**2
-            if(d2 > d1):
-                data_clusters[k] = pd.DataFrame()
-        except:
-            continue
-    return pd.concat(data_clusters)
 
 def soma10(df, new_filtered_data):
     new_filtered_data['Z'] = new_filtered_data['Z'] + 10
@@ -431,59 +369,47 @@ def ransac(filtered_data):
     line_X = np.arange(X.min(), X.max())[:, np.newaxis]
     line_y_ransac = ransac.predict(line_X)
 
-    plt.scatter(X[inlier_mask], y[inlier_mask], color = "yellowgreen", marker = ".", label = "Inliers")
+    '''plt.scatter(X[inlier_mask], y[inlier_mask], color = "yellowgreen", marker = ".", label = "Inliers")
     plt.scatter(X[outlier_mask], y[outlier_mask], color = "gold", marker = ".", label = "Outliers")
 
     plt.plot(line_X, line_y_ransac, color = "cornflowerblue", linewidth = 2, label = "RANSAC regressor",)
     plt.legend(loc = "lower right")
     plt.xlabel("Input")
     plt.ylabel("Response")
-    plt.show()
+    plt.show()'''
 
     return (filtered_data[filtered_data[['X','Y']].apply(tuple,1).isin(zip(list(X[inlier_mask].flat), list(y[inlier_mask].flat)))])
 
-def trata_ransac(df, N_CLUSTERS):
-    new_df = kmeans(df, N_CLUSTERS)
-    data_clusters, sizes = [], []
-    print('--------------------[trata_ransac]-----------------------------')
-    try:
-        for i in range(N_CLUSTERS):
-            data_clusters.append(new_df[new_df.cluster == i])
-            sizes.append(data_clusters[i].shape[0])
-        print(f"-> Maiores Clusters por tamanho: {np.argsort(sizes)}")
-        for i in range(N_CLUSTERS//2):
-            for index, row in data_clusters[i].iterrows():
-                if row.cluster == i:
-                    try:
-                        data_clusters[i] = data_clusters[i].drop(index)
-                    except:
-                        pass
-        print('---------------------------------------------------------')
-        return pd.concat(data_clusters)
-    except Exception as e:
-        print('xxxxxxxxxxxxxxxxxxxxxxx[trata_ransac]xxxxxxxxxxxxxxxxxxxxxxxxxxx')
-        print(f"Sem dados: {e}")
-        print('xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx')
+def testa_arvores(list_tree, processed_data):
+    print('----------------------[testa_arvores]-----------------------------')
+    dist_tree = []
+    org = []
+    for tree in list_tree:
+        dist_tree.append(getDistancia(processed_data, tree))
+    for item in np.argsort(dist_tree):
+        org.append(list_tree[item])
+    print(f"-> Clusters por distância: {org}") 
+    print('---------------------------------------------------------')
+    return org, sorted(dist_tree)
 
 def main(path, quadrante):
     #-----------------------Corte----------------------------
     data = pd.read_csv(path)
     new_data = data[['X', 'Y', 'Z', 'reflectivity']].copy()
-    new_data = new_data[new_data.Y.abs() <= 40]
-    new_data = new_data[new_data.X.abs() <= (abs(new_data['X'].mean())) + (abs(new_data['X'].std()))] #7
+    new_data = new_data[new_data.Y > 0]
+    new_data = new_data[new_data.Y < 40]
+    new_data = new_data[new_data.X > 0]
     #########################################################
     #-------------------1º Kmeans----------------------------
-    processed_data = kmeans(new_data, N_CLUSTERS = 6)
     processed_data = getQuadrante(new_data, quadrante)
     filtered_data = filtro(processed_data)
     filtered_data = ransac(filtered_data.copy())
-    #filtered_data = ransac(trata_ransac(filtered_data.copy(), N_CLUSTERS = 6))
     processed_data = processed_data[~processed_data['X'].isin(list(filtered_data.X))]
     #########################################################
     #-------------------2º Kmeans----------------------------
     try:
         processed_data = kmeans(processed_data, N_CLUSTERS = 8)
-        list_tree = find_tree(processed_data, N_CLUSTERS = 8)
+        
     except Exception as e:
         print('xxxxxxxxxxxxxxxxxxxxx[main]xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx')
         print(f"Sem dados processados: {e}")
@@ -492,8 +418,6 @@ def main(path, quadrante):
     #--------------------3º Kmeans---------------------------
     try:
         if(filtered_data.shape[0] > 0):
-            #filtered_data = deleta_discrepantes(filtered_data, N_CLUSTERS = 8)
-            #filtered_data = deleta_verticais(filtered_data, N_CLUSTERS = 8)
             if(len(filtered_data) < 4):
                 print(f"Sem fios no quadrante da árvore!")
                 print('---------------------------------------------------------')
@@ -510,16 +434,54 @@ def main(path, quadrante):
     #########################################################
     soma10(new_data, filtered_data.copy())
     #-------------------------Cálculos-----------------------
-    max_index = getClusterSize(processed_data, N_CLUSTERS = 8)
-    if list_tree:
-        for index in max_index:
-            if index in list_tree:
-                max_index = index
-                break
-    else:
+    try:
+        dict_cluster = []
+        list_tree = []
+        potenciais_arvores = []
+        dist1 = 5 #distancia a ser determinada, para cluster de árvore próximo ao carro. Por exemplo, 5
+        std_near = 1.1 # STD normalmente encontrado em árvores próximas ao carro
+
+        max_index, max_str_tree = getClusterSize(processed_data, N_CLUSTERS = 8)
+        list_tree = find_tree(processed_data, N_CLUSTERS = 8)
+        dist_tree_index, dist_tree_value = testa_arvores(list_tree, processed_data)
+
+        for tree in list_tree:
+            dict_cluster.append({'Cluster': tree, 
+                                'STD_Index': list(max_index).index(tree),
+                                'STD_Value': max_str_tree[list(max_index).index(tree)],
+                                'DIST_Index': dist_tree_index.index(tree),
+                                'DIST_Value': dist_tree_value[dist_tree_index.index(tree)],
+                                'OVERALL': 0
+                                })
+        for cluster in dict_cluster:
+            std_adapted = 0
+            if cluster["DIST_Value"] < dist1:
+                std_adapted = std_near
+            else: #a árvore está distante, então o STD pode ser menor. Digamos, 50% menor
+                std_adapted = std_near * 0.5
+
+            if cluster["STD_Value"] >= std_adapted:
+                #classifica como árvore
+                potenciais_arvores.append(cluster)
+                cluster["OVERALL"] = cluster["STD_Value"]**2 / cluster["DIST_Value"]
+            else:
+                cluster["OVERALL"] = -1
+            print(cluster)
+
+        print("Potenciais árvores:")
+        potenciais_arvores = sorted(potenciais_arvores, key=lambda d: d['OVERALL'], reverse = True) 
+        for elemento in potenciais_arvores:
+            print(elemento)
+        max_index = potenciais_arvores[0]['Cluster']
+            
+        
+    except Exception as e:
+        print(e)
         max_index = max_index[0]
     print('---------------------[main]------------------------------')
     print(f"-> Cluster Selecionado: {max_index}")
+    print(f"Reflectividade média da árvore: {processed_data[processed_data.cluster == max_index]['reflectivity'].mean()}")
+    print(f"Reflectividade média do fio: {filtered_data['reflectivity'].mean()}")
     print('---------------------------------------------------------')
     soma10(new_data, processed_data[processed_data.cluster == max_index].copy())
 
@@ -530,7 +492,8 @@ def main(path, quadrante):
         distancia = getDistancia(processed_data, max_index)
         altura = getAltura(processed_data, max_index)
         try:
-            dist_compare(filtered_data, processed_data, max_index)
+            contato = dist_compare(filtered_data, processed_data, max_index)
+            print(f'Distância de contato entre a árvore e o fio: {contato}.')
         except:
             print('xxxxxxxxxxxxxxxxxxxxx[main]xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx')
             print('Sem fios detectados na captura!')
@@ -543,6 +506,17 @@ def main(path, quadrante):
     #########################################################
     return distancia, altura, processed_data
 
+def find_files():
+	from os import listdir
+	from os.path import isfile, join
+	lidar_files = []
+	onlyfiles = [f for f in listdir('/home/ubuntu/Downloads/lidar/202201281/20220128165430/') if isfile(join('/home/ubuntu/Downloads/lidar/202201281/20220128165430/', f))]
+	for file in onlyfiles:
+		if 'csv' in file:
+			lidar_files.append(file)
+
+	return lidar_files
+
 if __name__ == '__main__':
 
     path = "fevereiro/20220201175111/20220201181508435555.lidar.csv"
@@ -552,70 +526,31 @@ if __name__ == '__main__':
     #path = "fevereiro/20220201175111/20220201175523926785.lidar.csv"
     #path = "fevereiro/20220201175111/20220201175846172005.lidar.csv"
     #quadrante = 'top-left'
+
     #path = "new_csv/20211210122052.lidar.csv"  #parede com árvore
-    #path = "new_csv/20211210121705.lidar.csv"
-    #path = "new_csv/20211210122007.lidar.csv"
-    #path = "new_csv/20211210121625.lidar.csv"
-    #path = "new_csv/20211210121658.lidar.csv"
-    #path = "new_csv/20211210122014.lidar.csv"
-    #path = "new_csv/20211210121351.lidar.csv"
-    #path = "new_csv/20220128165959963581.lidar.csv"
-    #path = "new_csv/20220128165810571231.lidar.csv"
-    path = "new_csv/20220128182056372078.lidar.csv"
-    #path = "new_csv/20220128182335600397.lidar.csv"
-    #path = "new_csv/20220128181445848581.lidar.csv"
-    #path = "new_csv/20220128182123391526.lidar.csv"
-    #path = "new_csv/20220128182109090682.lidar.csv"
-    #path = "new_csv/20220128181609837936.lidar.csv"
-    #path = "new_csv/20220128182412184428.lidar.csv"
-    #path = "new_csv/20220128165554190989.lidar.csv"
-    #path = "new_csv/20220128165725241408.lidar.csv"
-    #path = "new_csv/20220128181427055157.lidar.csv"
-    #path = "new_csv/20220128170057570395.lidar.csv"
-    #path = "new_csv/20220128170051700305.lidar.csv"
-    #path = "new_csv/20220128170044402196.lidar.csv"
-    #path = "new_csv/20220128170037952314.lidar.csv"
-    #path = "new_csv/20220128170019795662.lidar.csv"
-    #path = "new_csv/20220128165948409888.lidar.csv"
-    #path = "new_csv/20220128182441807807.lidar.csv"
-    #path = "new_csv/20220128182426344225.lidar.csv"
-    #path = "new_csv/20220128182418043611.lidar.csv"
-    #path = "new_csv/20220128182405693407.lidar.csv"
-    #path = "new_csv/20220128182357516042.lidar.csv"
-    #path = "new_csv/20220128182351043942.lidar.csv"
-    #path = "new_csv/20220128182342824927.lidar.csv"
-    #path = "new_csv/20220128182328695582.lidar.csv"
-    #path = "new_csv/20220128182315211751.lidar.csv"
-    #path = "new_csv/20220128182309047544.lidar.csv"
-    #path = "new_csv/20220128182256898757.lidar.csv"
-    #path = "new_csv/20220128182236330366.lidar.csv"
-    #path = "new_csv/20220128182230115372.lidar.csv"
-    #path = "new_csv/20220128182223900104.lidar.csv"
-    #path = "new_csv/20220128182209906049.lidar.csv"
-    #path = "new_csv/20220128182203188265.lidar.csv"
-    #path = "new_csv/20220128182156404349.lidar.csv"
-    #path = "new_csv/20220128182142073841.lidar.csv"
-    #path = "new_csv/20220128182135702661.lidar.csv"
-    #path = "new_csv/20220128182128244150.lidar.csv"
-    #path = "new_csv/20220128182115834742.lidar.csv"
-    #path = "new_csv/20220128181943620761.lidar.csv"
-    #path = "new_csv/20220128181937734234.lidar.csv"
-    #path = "new_csv/20220128181925050237.lidar.csv"
-    #path = "new_csv/20220128181918660275.lidar.csv"
-    #path = "new_csv/20220128181913143611.lidar.csv"
-    #path = "new_csv/20220128181845068014.lidar.csv"
-    #path = "new_csv/20220128181739100001.lidar.csv"
-    #path = "new_csv/20220128181711512810.lidar.csv"
-    #path = "new_csv/20220128181704055310.lidar.csv"
-    #path = "new_csv/20220128181629544648.lidar.csv"
-    #path = "new_csv/20220128181556152805.lidar.csv"
-    #path = "new_csv/20220128181528060718.lidar.csv"
-    #path = "new_csv/20220128181359051080.lidar.csv"
-    #path = "new_csv/20211210122125.lidar.csv"
-    path = "new_csv/20211210122119.lidar.csv"
-    #path = "fevereiro/20220201175111/20220201181314067145.lidar.csv"
-    #path = "fevereiro/20220201175111/20220201175609659564.lidar.csv"
-    #path = "fevereiro/20220201175111/20220201175946943503.lidar.csv"
+
+    files = find_files()
+    for file in files:
+        try:
+            input('Enter: ')
+            os.system('clear')
+            print('-----------------------[captura]---------------------------')
+            path = (f"/home/ubuntu/Downloads/lidar/202201281/20220128165430/{file}")
+            print('------------------------------------------------------------')
+            print(path)
+            quadrante = 'top-right'
+            distancia, altura, _ = main(path, quadrante)
+
+            if distancia and altura:
+                print('-----------------------[__main__]---------------------------')
+                print(f"-> Altura: {altura:.2f} metros")
+                print(f"-> Distancia: {distancia:.2f} metros")
+                print('------------------------------------------------------------')
+				
+        except Exception as e:
+            print(e)
+
+    path = "25-02cap/20220224150216/20220224151218684026.lidar.csv"
     quadrante = 'top-right'
     distancia, altura, _ = main(path, quadrante)
 
