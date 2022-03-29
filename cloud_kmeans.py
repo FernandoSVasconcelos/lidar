@@ -396,10 +396,11 @@ def testa_arvores(list_tree, processed_data):
 def main(path, quadrante):
     #-----------------------Corte----------------------------
     data = pd.read_csv(path)
-    new_data = data[['X', 'Y', 'Z', 'reflectivity']].copy()
+    new_data = data[['X', 'Y', 'Z']].copy()
     new_data = new_data[new_data.Y > 0]
     new_data = new_data[new_data.Y < 40]
     new_data = new_data[new_data.X > 0]
+    new_data = new_data[new_data.X < 25]
     #########################################################
     #-------------------1º Kmeans----------------------------
     processed_data = getQuadrante(new_data, quadrante)
@@ -472,7 +473,6 @@ def main(path, quadrante):
                     cluster["OVERALL"] = cluster["STD_Value"]**2 / cluster["DIST_Value"]
             else:
                 cluster["OVERALL"] = -1
-            #print(cluster)
             print(yaml.dump(cluster, default_flow_style=False))
 
         print("------------------------------------Potenciais árvores----------------------------------")
