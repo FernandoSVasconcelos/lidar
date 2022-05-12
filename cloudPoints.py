@@ -6,7 +6,6 @@ import math
 import open3d as o3d
 import os
 
-
 def generate_image(points : List[float], path : str) -> None:
 	pcd = o3d.geometry.PointCloud()
 	pcd.points = o3d.utility.Vector3dVector(points)
@@ -26,7 +25,7 @@ def generate_image(points : List[float], path : str) -> None:
 def generate_mesh(points : List[float]) -> None:
 	pcd = o3d.geometry.PointCloud()
 	pcd.points = o3d.utility.Vector3dVector(points)
-	mesh_frame = o3d.geometry.TriangleMesh.create_coordinate_frame(size=5)
+	mesh_frame = o3d.geometry.TriangleMesh.create_coordinate_frame(size=10)
 	mesh_frame.translate([0, 0, 0])
 	
 	'''
