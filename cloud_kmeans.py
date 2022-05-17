@@ -1,4 +1,6 @@
 import os
+
+from regex import I
 import cloudPoints
 import math
 import matplotlib.pyplot as plt
@@ -10,13 +12,13 @@ import yaml
 
 pd.options.mode.chained_assignment = None
 
-def filtro(raw_points):
-    new_df = []
+def filtro(raw_points) -> pd.DataFrame:
+    new_df : list= []
     for _, row in raw_points.iterrows():
         if (2 < row['Y'] < 10):
             if (-0.5 < row['Z'] < 3) and (3 < abs(row['X']) < 7):
                 new_df.append(row)
-        elif (10 < row['Y'] < 20):
+        elif (10 < row['Y'] < 15):
             if (-1.75 < row['Z'] < 4.5) and (3 < abs(row['X']) < 7):
                 new_df.append(row)  
     return pd.DataFrame(new_df)
@@ -334,84 +336,117 @@ def find_tree(data, N_CLUSTERS):
         print(f"Sem dados: {e}")
         print('xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx')
 
-'''def remove_near(X, Y):
-    new_X, new_Y = [], []
-    for i in range(len(X) - 1):
-        dist = math.hypot(X[i] - Y[i], X[i + 1] - Y[i + 1])
-        print(dist)
-        if dist > 5:
-            new_X.append(X[i])
-            new_Y.append(Y[i])
-    return np.array(new_X).reshape(-1, 1), np.array(new_Y).reshape(-1, 1)'''
+def ransac(filtered_data, N_TIMES):
+    vet_coord = [[filtered_data['X'].to_numpy().reshape(-1, 1), filtered_data['Y'].to_numpy().reshape(-1, 1)]]
+    for i in range(len(N_TIMES)):
+        dist = 0
+        
+        ransac = linear_model.RANSACRegressor(residual_threshold = N_TIMES[i]).fit(vet_coord[i][0], vet_coord[i][1])
+        inlier_mask = ransac.inlier_mask_
+        outlier_mask = np.logical_not(inlier_mask)
+        score = ransac.score(vet_coord[i][0], vet_coord[i][1])
 
-def remove_near_indentical_rows(arr, threshold):
-    row, column = arr.shape
-    arg = arr.argsort(axis=0)[:, 0]
-    arr=arr[arg]
+        print(f"Score: {score}")
 
-    arr_mask = np.zeros(row, dtype=bool)
-    cur_row = arr[0]
-    arr_mask[0] = True
-    for i in range(1, row):
-        if np.sum(np.abs(arr[i] - cur_row))/column > threshold:
-            arr_mask[i] = True
-            cur_row = arr[i]
+        line_X = np.arange(vet_coord[i][0].min(), vet_coord[i][0].max())[:, np.newaxis]
+        line_y_ransac = ransac.predict(line_X)
 
-    arg = arg[arr_mask]
-    return arr[arg]
+        vet_coord.append([vet_coord[i][0][inlier_mask], vet_coord[i][1][inlier_mask]])
 
-def remove_near(X, Y):
-    new_X, new_Y = [], []
-    for i in range(len(X)):
-        for j in range(len(X)):
-            dist = math.hypot(X[i] - Y[i], X[j] - Y[j])
-            print(dist)
-            if dist > 5:
-                new_X.append(X[j])
-                new_Y.append(Y[j])
+        vet_test = filtered_data[filtered_data[['X','Y']].apply(tuple,1).isin(zip(list(vet_coord[i][0][inlier_mask].flat), list(vet_coord[i][1][inlier_mask].flat)))]
 
-    vet = np.column_stack((X, Y))
-    arr = remove_near_indentical_rows(vet, 1)
-    print(arr)
+        X1 = vet_coord[i][0][inlier_mask]
+        Y1 = vet_coord[i][1][inlier_mask]
 
-    return np.array(new_X).reshape(-1, 1), np.array(new_Y).reshape(-1, 1)
+        for k in range(len(X1) - 1):
+            dist += math.sqrt((X1[k+1] - X1[k])**2 + (Y1[k+1] - Y1[k])**2)
+        media = dist / len(X1)
+        print(f"Média: {media:.2f}")
 
-def ransac(filtered_data):
-    X = filtered_data['X'].to_numpy().reshape(-1, 1)
-    y = filtered_data['Y'].to_numpy().reshape(-1, 1)
+        '''plt.scatter(vet_coord[i][0][inlier_mask], vet_coord[i][1][inlier_mask], color = "yellowgreen", marker = ".", label = "Inliers")
+        plt.scatter(vet_coord[i][0][outlier_mask], vet_coord[i][1][outlier_mask], color = "gold", marker = ".", label = "Outliers")
 
-    X, y = remove_near(X, y)
+        plt.plot(line_X, line_y_ransac, color = "cornflowerblue", linewidth = 2, label = "RANSAC regressor",)
+        plt.legend(loc = "lower right")
+        plt.xlabel("X")
+        plt.ylabel("Y")
+        plt.show()'''
     
-    ransac = linear_model.RANSACRegressor(residual_threshold = 0.5)
-    ransac.fit(X, y)
-    inlier_mask = ransac.inlier_mask_
-    outlier_mask = np.logical_not(inlier_mask)
+    return (filtered_data[filtered_data[['X','Y']].apply(tuple,1).isin(zip(list(vet_coord[i][0][inlier_mask].flat), list(vet_coord[i][1][inlier_mask].flat)))], score, media)
 
-    line_X = np.arange(X.min(), X.max())[:, np.newaxis]
-    line_y_ransac = ransac.predict(line_X)
+def testa_arvores(processed_data):
+    try:
+        dict_cluster, list_tree, potenciais_arvores, y_cluster = [], [], [], []
+        for i in range(16):
+            y_cluster.append(processed_data[processed_data.cluster == i]['Y'].mean())
+        dist1 = 5 #distancia a ser determinada, para cluster de árvore próximo ao carro. Por exemplo, 5
+        std_near = 1.1 # STD normalmente encontrado em árvores próximas ao carro
 
-    plt.scatter(X[inlier_mask], y[inlier_mask], color = "yellowgreen", marker = ".", label = "Inliers")
-    plt.scatter(X[outlier_mask], y[outlier_mask], color = "gold", marker = ".", label = "Outliers")
+        list_tree = find_tree(processed_data, N_CLUSTERS = 16)
+        for tree in list_tree:
+            _, score_arvore, media_arvore = ransac(processed_data[processed_data.cluster == tree].copy(), N_TIMES = [0.25])
+            dict_cluster.append({
+                'Cluster': tree, 
+                'STD_X_Value': processed_data[processed_data.cluster == tree]['X'].std(),
+                'STD_Y_Value': processed_data[processed_data.cluster == tree]['Y'].std(),
+                'STD_Z_Value': processed_data[processed_data.cluster == tree]['Z'].std(),
+                'DIST_Value': getDistancia(processed_data, tree),
+                'Y_mean': y_cluster[tree],
+                'Media_Dist': media_arvore,
+                'OVERALL': 0
+            })
+ 
+        for cluster in dict_cluster:
+            std_adapted = 0
+            if cluster["DIST_Value"] < dist1:
+                std_adapted = std_near
+            else: #a árvore está distante, então o STD pode ser menor. Digamos, 50% menor
+                std_adapted = std_near * 0.5
 
-    plt.plot(line_X, line_y_ransac, color = "cornflowerblue", linewidth = 2, label = "RANSAC regressor",)
-    plt.legend(loc = "lower right")
-    plt.xlabel("Input")
-    plt.ylabel("Response")
-    plt.show()
+            if cluster["STD_X_Value"] >= std_adapted:
+                #classifica como árvore
+                if cluster["Y_mean"] > 7:
+                    potenciais_arvores.append(cluster)
+                    cluster["OVERALL"] = cluster["STD_X_Value"]**2 / cluster["DIST_Value"]
+                    if( 0.2 < cluster["Media_Dist"] < 0.35):
+                        cluster["OVERALL"] += 100
+            else:
+                cluster["OVERALL"] = -1
+            print(yaml.dump(cluster, default_flow_style=False))
 
-    return (filtered_data[filtered_data[['X','Y']].apply(tuple,1).isin(zip(list(X[inlier_mask].flat), list(y[inlier_mask].flat)))])
+        print("------------------------------------Potenciais árvores----------------------------------")
+        potenciais_arvores = sorted(potenciais_arvores, key=lambda d: d['OVERALL'], reverse = True) 
+        for elemento in potenciais_arvores:
+            print(yaml.dump(elemento, default_flow_style=False))
+        return potenciais_arvores[0]['Cluster'], score_arvore
+    except Exception as e:
+        print(f"Sem árvores encontradas: {e}")
+        return 0, 0
+    
+def testa_fios(filtered_data):
+    dict_fios, potenciais_fios = [], []
+    for i in range(2):
+        _, score_fio, media_fio = ransac(filtered_data[filtered_data.cluster == i].copy(), N_TIMES = [0.25])
+        dict_fios.append({
+            'Cluster': i,
+            'Media_Dist': media_fio,
+            'Score_Fio': score_fio,
+            'OVERALL': 0
+        })
 
-def testa_arvores(list_tree, processed_data):
-    print('----------------------[testa_arvores]-----------------------------')
-    dist_tree = []
-    org = []
-    for tree in list_tree:
-        dist_tree.append(getDistancia(processed_data, tree))
-    for item in np.argsort(dist_tree):
-        org.append(list_tree[item])
-    print(f"-> Clusters por distância: {org}") 
-    print('---------------------------------------------------------')
-    return org, sorted(dist_tree)
+    for cluster in dict_fios:
+        if(cluster["Media_Dist"] > 0.35):
+            cluster["OVERALL"] += 100
+        else:
+            cluster["OVERALL"] = -1
+        potenciais_fios.append(cluster)
+        #print(yaml.dump(cluster, default_flow_style=False))
+
+    potenciais_fios = sorted(potenciais_fios, key=lambda d: d['OVERALL'], reverse = True)
+    #for fio in potenciais_fios:
+    #    print(yaml.dump(fio, default_flow_style=False))
+    max_index = potenciais_fios[0]['Cluster']
+    return filtered_data[filtered_data.cluster == max_index], potenciais_fios
 
 def main(path, quadrante):
     #-----------------------Corte----------------------------
@@ -425,13 +460,13 @@ def main(path, quadrante):
     #-------------------1º Kmeans----------------------------
     processed_data = getQuadrante(new_data, quadrante)
     filtered_data = filtro(processed_data)
-    filtered_data = ransac(filtered_data.copy())
+    filtered_data = kmeans(filtered_data, N_CLUSTERS = 2)
+    filtered_data, potenciais_fios = testa_fios(filtered_data.copy())
     processed_data = processed_data[~processed_data['X'].isin(list(filtered_data.X))]
     #########################################################
     #-------------------2º Kmeans----------------------------
     try:
         processed_data = kmeans(processed_data, N_CLUSTERS = 16)
-        
     except Exception as e:
         print('xxxxxxxxxxxxxxxxxxxxx[main]xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx')
         print(f"Sem dados processados: {e}")
@@ -455,53 +490,8 @@ def main(path, quadrante):
         print('xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx')
     soma10(new_data.copy(), filtered_data.copy())
     #-------------------------Cálculos-----------------------
-    try:
-        dict_cluster = []
-        list_tree = []
-        potenciais_arvores = []
-        y_cluster = []
-        for i in range(16):
-            y_cluster.append(processed_data[processed_data.cluster == i]['Y'].mean())
-        dist1 = 5 #distancia a ser determinada, para cluster de árvore próximo ao carro. Por exemplo, 5
-        std_near = 1.1 # STD normalmente encontrado em árvores próximas ao carro
+    max_index, score_arvore = testa_arvores(processed_data.copy())   
 
-        list_tree = find_tree(processed_data, N_CLUSTERS = 16)
-        for tree in list_tree:
-            dict_cluster.append({
-                'Cluster': tree, 
-                'STD_X_Value': processed_data[processed_data.cluster == tree]['X'].std(),
-                'STD_Y_Value': processed_data[processed_data.cluster == tree]['Y'].std(),
-                'STD_Z_Value': processed_data[processed_data.cluster == tree]['Z'].std(),
-                'DIST_Value': getDistancia(processed_data, tree),
-                'Y_mean': y_cluster[tree],
-                'OVERALL': 0
-            })
- 
-        for cluster in dict_cluster:
-            std_adapted = 0
-            if cluster["DIST_Value"] < dist1:
-                std_adapted = std_near
-            else: #a árvore está distante, então o STD pode ser menor. Digamos, 50% menor
-                std_adapted = std_near * 0.5
-
-            if cluster["STD_X_Value"] >= std_adapted:
-                #classifica como árvore
-                if cluster["Y_mean"] > 7:
-                    potenciais_arvores.append(cluster)
-                    cluster["OVERALL"] = cluster["STD_X_Value"]**2 / cluster["DIST_Value"]
-            else:
-                cluster["OVERALL"] = -1
-            print(yaml.dump(cluster, default_flow_style=False))
-
-        print("------------------------------------Potenciais árvores----------------------------------")
-        potenciais_arvores = sorted(potenciais_arvores, key=lambda d: d['OVERALL'], reverse = True) 
-        for elemento in potenciais_arvores:
-            print(yaml.dump(elemento, default_flow_style=False))
-        max_index = potenciais_arvores[0]['Cluster']
-            
-    except Exception as e:
-        print(f"Sem árvores encontradas: {e}")
-        return 0, 0, 0
     print('---------------------[main]------------------------------')
     print(f"-> Cluster Selecionado: {max_index}")
     print('---------------------------------------------------------')
@@ -525,9 +515,9 @@ def main(path, quadrante):
         print('xxxxxxxxxxxxxxxxxxxxx[main]xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx')
         print(f"Sem dados no quadrante: {e}")
         print('xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx')
-        return 0, 0, 0
+        return 0, 0, 0, 0, 0
     #########################################################
-    return distancia, altura, processed_data
+    return distancia, altura, processed_data, score_arvore, potenciais_fios[0]['Score_Fio']
 
 def find_files():
 	from os import listdir
@@ -551,12 +541,14 @@ if __name__ == '__main__':
             print('------------------------------------------------------------')
             print(path)
             quadrante = 'top-right'
-            distancia, altura, _ = main(path, quadrante)
+            distancia, altura, _, score_arvore, score_fio = main(path, quadrante)
 
             if distancia and altura:
                 print('-----------------------[__main__]---------------------------')
                 print(f"-> Altura: {altura:.2f} metros")
                 print(f"-> Distancia: {distancia:.2f} metros")
+                print(f"-> Score_arvore: {score_arvore}")
+                print(f"-> score_fio: {score_fio}")
                 print('------------------------------------------------------------')
 				
         except Exception as e:
