@@ -16,7 +16,7 @@ def filtro(raw_points) -> pd.DataFrame:
     new_df : list= []
     for _, row in raw_points.iterrows():
         if (2 < row['Y'] < 10):
-            if (-0.5 < row['Z'] < 3) and (3 < abs(row['X']) < 7):
+            if (0 < row['Z'] < 4.5) and (3 < abs(row['X']) < 7):
                 new_df.append(row)
         elif (10 < row['Y'] < 15):
             if (-1.75 < row['Z'] < 4.5) and (3 < abs(row['X']) < 7):
@@ -456,6 +456,7 @@ def main(path, quadrante):
     new_data = new_data[new_data.Y < 19]
     new_data = new_data[new_data.X > 0]
     new_data = new_data[new_data.X < 25]
+    new_data = new_data[new_data.Z > -2]
     #########################################################
     #-------------------1º Kmeans----------------------------
     processed_data = getQuadrante(new_data, quadrante)
