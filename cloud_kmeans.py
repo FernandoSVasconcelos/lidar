@@ -1,26 +1,36 @@
-import os
-
-from regex import I
 import cloudPoints
 import math
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+import os
+import yaml
+
 from sklearn import linear_model
 from sklearn.cluster import KMeans
-import yaml
 
 pd.options.mode.chained_assignment = None
 
 def filtro(raw_points) -> pd.DataFrame:
     new_df : list= []
     for _, row in raw_points.iterrows():
-        if (2 < row['Y'] < 10):
-            if (0 < row['Z'] < 4.5) and (3 < abs(row['X']) < 7):
+        if (1 < row['Y'] < 10):
+            if (0 < row['Z'] < 4.5) and (1 < abs(row['X']) < 12):
                 new_df.append(row)
         elif (10 < row['Y'] < 15):
-            if (-1.75 < row['Z'] < 4.5) and (3 < abs(row['X']) < 7):
+            if (-1 < row['Z'] < 4.5) and (1 < abs(row['X']) < 12):
                 new_df.append(row)  
+    return pd.DataFrame(new_df)
+
+def filtro_arvore(raw_points) -> pd.DataFrame:
+    new_df : list= []
+    for _, row in raw_points.iterrows():
+        if (0 < row['Y'] < 10):
+            if (0 < row['Z'] < 4.5):
+                new_df.append(row)
+        elif (10 < row['Y']):
+            if (-2 < row['Z'] < 4.5):
+                new_df.append(row) 
     return pd.DataFrame(new_df)
 
 def plot(data):
@@ -44,7 +54,7 @@ def getDistancia(processed_data, max_index):
     except Exception as e:
         print('xxxxxxxxxxxxxxxxxxx[getDistancia]xxxxxxxxxxxxxxxxxxxxxxxxxx')
         print(f"Sem dados: {e}")
-        print('xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxXXxxxxxxxxxxxxxxxxxxxxx')
+        print('xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx')
 
 def getAltura(data, max_index):
     new_data = data[data.cluster == max_index]
@@ -100,8 +110,20 @@ def soma10(df, new_filtered_data):
     new_filtered_data['Z'] = new_filtered_data['Z'] + 10
     plot(pd.concat([df, new_filtered_data]))
 
+def aux_find_tree(data, Z, new_data):
+    list_alt = []
+    X = data[data['Z'] == Z]
+    if X.shape[0] > 0:
+        X = X['X'].mean()
+    else:
+        for _, row in new_data.iterrows():
+            if row.Z > Z:
+                list_alt.append(row.X)
+        X = min(list_alt)
+    return X
+
 def find_tree(data, N_CLUSTERS):
-    list_alt, list_index = [], []
+    list_index = []
     try:
         for i in range(N_CLUSTERS):
             new_data = data[data.cluster == i]
@@ -111,217 +133,41 @@ def find_tree(data, N_CLUSTERS):
             z75 = new_data['Z'].quantile(q = 0.75)
             z100 = new_data['Z'].loc[new_data['Z'].idxmax()]
             #-------------------------------------------------------------------
-            x0 = data[data['Z'] == z0]
-            if x0.shape[0] > 0:
-                x0 = x0['X'].mean()
-            else:
-                for index, row in new_data.iterrows():
-                    if row.Z > z0:
-                        list_alt.append(row.X)
-                x0 = min(list_alt)
-                list_alt = []
-
-            x25 = data[data['Z'] == z25]
-            if x25.shape[0] > 0:
-                x25 = x25['X'].mean()
-            else:
-                for index, row in new_data.iterrows():
-                    if row.Z > z25:
-                        list_alt.append(row.X)
-                x25 = min(list_alt)
-                list_alt = []
-
-            x50 = data[data['Z'] == z50]
-            if x50.shape[0] > 0:
-                x50 = x50['X'].mean()
-            else:
-                for index, row in new_data.iterrows():
-                    if row.Z > z50:
-                        list_alt.append(row.X)
-                x50 = min(list_alt)
-                list_alt = []
-
-            x75 = data[data['Z'] == z75]
-            if x75.shape[0] > 0:
-                x75 = x75['X'].mean()
-            else:
-                for index, row in new_data.iterrows():
-                    if row.Z > z75:
-                        list_alt.append(row.X)
-                x75 = min(list_alt)
-                list_alt = []
-
-            x100 = data[data['Z'] == z100]
-            if x100.shape[0] > 0:
-                x100 = x100['X'].mean()
-            else:
-                for index, row in x0.iterrows():
-                    if row.Z < z100:
-                        list_alt.append(row.X)
-                x100 = max(list_alt)
-                list_alt = []
+            x0 = aux_find_tree(data, z0, new_data)
+            x25 = aux_find_tree(data, z25, new_data)
+            x50 = aux_find_tree(data, z50, new_data)
+            x75 = aux_find_tree(data, z75, new_data)
+            x100 = aux_find_tree(data, z100, new_data)
             #--------------------------------IF----------------------------------
             if(x0 > x25) and (x25 >= x50) and (x50 <= x75) and (x75 < x100):
                 list_index.append(i)
                 continue
             #--------------------------------X0----------------------------------
-            x0 = data[data['Z'] == z0]
-            if x0.shape[0] > 0:
-                x0 = x0['X'].mean()
-            else:
-                for index, row in new_data.iterrows():
-                    if row.Z > z0:
-                        list_alt.append(row.X)
-                x0 = min(list_alt)
-                list_alt = []
-            #--------------------------------X25---------------------------------
-            x25 = data[data['Z'] == z25]
-            if x25.shape[0] > 0:
-                x25 = x25['X'].mean()
-            else:
-                for index, row in new_data.iterrows():
-                    if row.Z > z25:
-                        list_alt.append(row.X)
-                x25 = min(list_alt)
-                list_alt = []
-            #--------------------------------X50---------------------------------
-            x50 = data[data['Z'] == z50]
-            if x50.shape[0] > 0:
-                x50 = x50['X'].mean()
-            else:
-                for index, row in new_data.iterrows():
-                    if row.Z > z50:
-                        list_alt.append(row.X)
-                x50 = min(list_alt)
-                list_alt = []
-            #--------------------------------X75---------------------------------
-            x75 = data[data['Z'] == z75]
-            if x75.shape[0] > 0:
-                x75 = x75['X'].mean()
-            else:
-                for index, row in new_data.iterrows():
-                    if row.Z > z75:
-                        list_alt.append(row.X)
-                x75 = min(list_alt)
-                list_alt = []
-            #--------------------------------X100--------------------------------
-            x100 = data[data['Z'] == z100]
-            if x100.shape[0] > 0:
-                x100 = x100['X'].mean()
-            else:
-                for index, row in x0.iterrows():
-                    if row.Z < z100:
-                        list_alt.append(row.X)
-                x100 = max(list_alt)
-                list_alt = []
+            x0 = aux_find_tree(data, z0, new_data)
+            x25 = aux_find_tree(data, z25, new_data)
+            x50 = aux_find_tree(data, z50, new_data)
+            x75 = aux_find_tree(data, z75, new_data)
+            x100 = aux_find_tree(data, z100, new_data)
             #--------------------------------IF----------------------------------
             if(x0 < x25) and (x25 <= x50) and (x50 >= x75) and (x75 > x100):
                 list_index.append(i)
                 continue
             #--------------------------------Y0----------------------------------
-            y0 = data[data['Z'] == z0]
-            if y0.shape[0] > 0:
-                y0 = y0['Y'].mean()
-            else:
-                for index, row in new_data.iterrows():
-                    if row.Z > z0:
-                        list_alt.append(row.Y)
-                y0 = min(list_alt)
-                list_alt = []
-            #--------------------------------Y25---------------------------------
-            y25 = data[data['Z'] == z25]
-            if y25.shape[0] > 0:
-                y25 = y25['Y'].mean()
-            else:
-                for index, row in new_data.iterrows():
-                    if row.Z > z25:
-                        list_alt.append(row.Y)
-                y25 = min(list_alt)
-                list_alt = []
-            #--------------------------------Y50---------------------------------
-            y50 = data[data['Z'] == z50]
-            if y50.shape[0] > 0:
-                y50 = y50['Y'].mean()
-            else:
-                for index, row in new_data.iterrows():
-                    if row.Z > z50:
-                        list_alt.append(row.Y)
-                y50 = min(list_alt)
-                list_alt = []
-            #--------------------------------Y75---------------------------------
-            y75 = data[data['Z'] == z75]
-            if y75.shape[0] > 0:
-                y75 = y75['Y'].mean()
-            else:
-                for index, row in new_data.iterrows():
-                    if row.Z > z75:
-                        list_alt.append(row.Y)
-                y75 = min(list_alt)
-                list_alt = []
-            #--------------------------------Y100--------------------------------
-            y100 = data[data['Z'] == z100]
-            if y100.shape[0] > 0:
-                y100 = y100['Y'].mean()
-            else:
-                for index, row in x0.iterrows():
-                    if row.Z < z100:
-                        list_alt.append(row.Y)
-                y100 = max(list_alt)
-                list_alt = []
+            y0 = aux_find_tree(data, z0, new_data)
+            y25 = aux_find_tree(data, z25, new_data)
+            y50 = aux_find_tree(data, z50, new_data)
+            y75 = aux_find_tree(data, z75, new_data)
+            y100 = aux_find_tree(data, z100, new_data)
             #--------------------------------IF----------------------------------
             if(y0 > y25) and (y25 >= y50) and (y50 <= y75) and (y75 < y100):
                 list_index.append(i)
                 continue
             #--------------------------------Y0----------------------------------
-            y0 = data[data['Z'] == z0]
-            if y0.shape[0] > 0:
-                y0 = y0['Y'].mean()
-            else:
-                for index, row in new_data.iterrows():
-                    if row.Z > z0:
-                        list_alt.append(row.Y)
-                y0 = min(list_alt)
-                list_alt = []
-            #--------------------------------Y25---------------------------------
-            y25 = data[data['Z'] == z25]
-            if y25.shape[0] > 0:
-                y25 = y25['Y'].mean()
-            else:
-                for index, row in new_data.iterrows():
-                    if row.Z > z25:
-                        list_alt.append(row.Y)
-                y25 = min(list_alt)
-                list_alt = []
-            #--------------------------------Y50---------------------------------
-            y50 = data[data['Z'] == z50]
-            if y50.shape[0] > 0:
-                y50 = y50['Y'].mean()
-            else:
-                for index, row in new_data.iterrows():
-                    if row.Z > z50:
-                        list_alt.append(row.Y)
-                y50 = min(list_alt)
-                list_alt = []
-            #--------------------------------Y75---------------------------------
-            y75 = data[data['Z'] == z75]
-            if y75.shape[0] > 0:
-                y75 = y75['Y'].mean()
-            else:
-                for index, row in new_data.iterrows():
-                    if row.Z > z75:
-                        list_alt.append(row.Y)
-                y75 = min(list_alt)
-                list_alt = []
-            #--------------------------------Y100--------------------------------
-            y100 = data[data['Z'] == z100]
-            if y100.shape[0] > 0:
-                y100 = y100['Y'].mean()
-            else:
-                for index, row in x0.iterrows():
-                    if row.Z < z100:
-                        list_alt.append(row.Y)
-                y100 = max(list_alt)
-                list_alt = []
+            y0 = aux_find_tree(data, z0, new_data)
+            y25 = aux_find_tree(data, z25, new_data)
+            y50 = aux_find_tree(data, z50, new_data)
+            y75 = aux_find_tree(data, z75, new_data)
+            y100 = aux_find_tree(data, z100, new_data)
             #--------------------------------IF----------------------------------
             if(y0 < y25) and (y25 <= y50) and (y50 >= y75) and (y75 > y100):
                 list_index.append(i)
@@ -346,22 +192,16 @@ def ransac(filtered_data, N_TIMES):
         outlier_mask = np.logical_not(inlier_mask)
         score = ransac.score(vet_coord[i][0], vet_coord[i][1])
 
-        print(f"Score: {score}")
-
         line_X = np.arange(vet_coord[i][0].min(), vet_coord[i][0].max())[:, np.newaxis]
         line_y_ransac = ransac.predict(line_X)
 
         vet_coord.append([vet_coord[i][0][inlier_mask], vet_coord[i][1][inlier_mask]])
 
-        vet_test = filtered_data[filtered_data[['X','Y']].apply(tuple,1).isin(zip(list(vet_coord[i][0][inlier_mask].flat), list(vet_coord[i][1][inlier_mask].flat)))]
-
-        X1 = vet_coord[i][0][inlier_mask]
-        Y1 = vet_coord[i][1][inlier_mask]
+        X1, Y1 = vet_coord[i][0][inlier_mask], vet_coord[i][1][inlier_mask]
 
         for k in range(len(X1) - 1):
             dist += math.sqrt((X1[k+1] - X1[k])**2 + (Y1[k+1] - Y1[k])**2)
         media = dist / len(X1)
-        print(f"Média: {media:.2f}")
 
         '''plt.scatter(vet_coord[i][0][inlier_mask], vet_coord[i][1][inlier_mask], color = "yellowgreen", marker = ".", label = "Inliers")
         plt.scatter(vet_coord[i][0][outlier_mask], vet_coord[i][1][outlier_mask], color = "gold", marker = ".", label = "Outliers")
@@ -374,17 +214,25 @@ def ransac(filtered_data, N_TIMES):
     
     return (filtered_data[filtered_data[['X','Y']].apply(tuple,1).isin(zip(list(vet_coord[i][0][inlier_mask].flat), list(vet_coord[i][1][inlier_mask].flat)))], score, media)
 
-def testa_arvores(processed_data):
+def testa_arvores(processed_data, fio_data):
     try:
-        dict_cluster, list_tree, potenciais_arvores, y_cluster = [], [], [], []
-        for i in range(16):
+        dict_cluster, list_tree, potenciais_arvores, y_cluster, x_cluster = [], [], [], [], []
+        for i in range(15):
             y_cluster.append(processed_data[processed_data.cluster == i]['Y'].mean())
-        dist1 = 5 #distancia a ser determinada, para cluster de árvore próximo ao carro. Por exemplo, 5
-        std_near = 1.1 # STD normalmente encontrado em árvores próximas ao carro
-
-        list_tree = find_tree(processed_data, N_CLUSTERS = 16)
+            x_cluster.append(processed_data[processed_data.cluster == i]['X'].mean())
+        list_tree = find_tree(processed_data, N_CLUSTERS = 15)
         for tree in list_tree:
             _, score_arvore, media_arvore = ransac(processed_data[processed_data.cluster == tree].copy(), N_TIMES = [0.25])
+
+            vet_coord = [processed_data[processed_data.cluster == tree]['X'].to_numpy().reshape(-1, 1), processed_data[processed_data.cluster == tree]['Y'].to_numpy().reshape(-1, 1)]
+            X1, Y1 = vet_coord[0], vet_coord[1]
+
+            dist = []
+            for k in range(len(X1) - 1):
+                arr = round(math.sqrt((X1[k+1] - X1[k])**2 + (Y1[k+1] - Y1[k])**2), 2)
+                dist.append(arr)
+            media_arvore = max(set(dist), key=dist.count)
+
             dict_cluster.append({
                 'Cluster': tree, 
                 'STD_X_Value': processed_data[processed_data.cluster == tree]['X'].std(),
@@ -392,60 +240,75 @@ def testa_arvores(processed_data):
                 'STD_Z_Value': processed_data[processed_data.cluster == tree]['Z'].std(),
                 'DIST_Value': getDistancia(processed_data, tree),
                 'Y_mean': y_cluster[tree],
+                'X_mean': x_cluster[tree],
                 'Media_Dist': media_arvore,
                 'OVERALL': 0
             })
- 
-        for cluster in dict_cluster:
-            std_adapted = 0
-            if cluster["DIST_Value"] < dist1:
-                std_adapted = std_near
-            else: #a árvore está distante, então o STD pode ser menor. Digamos, 50% menor
-                std_adapted = std_near * 0.5
 
-            if cluster["STD_X_Value"] >= std_adapted:
-                #classifica como árvore
-                if cluster["Y_mean"] > 7:
-                    potenciais_arvores.append(cluster)
-                    cluster["OVERALL"] = cluster["STD_X_Value"]**2 / cluster["DIST_Value"]
-                    if( 0.2 < cluster["Media_Dist"] < 0.35):
-                        cluster["OVERALL"] += 100
-            else:
-                cluster["OVERALL"] = -1
-            print(yaml.dump(cluster, default_flow_style=False))
+        for cluster in dict_cluster:
+            print(f"Media_Dist: {cluster['Media_Dist']}")
+            if cluster["Y_mean"] > 1:
+                potenciais_arvores.append(cluster)
+                cluster["OVERALL"] = (1 / cluster["DIST_Value"])
+                if( 0.22 <= cluster["Media_Dist"] <= 0.43):
+                    cluster["OVERALL"] += 100  #+ cluster["Media_Dist"]
+            print(f"OVERALL: {cluster['OVERALL']}")
 
         print("------------------------------------Potenciais árvores----------------------------------")
-        potenciais_arvores = sorted(potenciais_arvores, key=lambda d: d['OVERALL'], reverse = True) 
+        potenciais_arvores = sorted(potenciais_arvores, key = lambda d: d['OVERALL'], reverse = True) 
         for elemento in potenciais_arvores:
-            print(yaml.dump(elemento, default_flow_style=False))
+            print(yaml.dump(elemento, default_flow_style = False))
         return potenciais_arvores[0]['Cluster'], score_arvore
     except Exception as e:
-        print(f"Sem árvores encontradas: {e}")
-        return 0, 0
+        print(f"Sem árvores encontradas: {str(e)}")
+        return -1, -1
     
 def testa_fios(filtered_data):
     dict_fios, potenciais_fios = [], []
     for i in range(2):
         _, score_fio, media_fio = ransac(filtered_data[filtered_data.cluster == i].copy(), N_TIMES = [0.25])
+
+        vet_coord = [filtered_data[filtered_data.cluster == i]['X'].to_numpy().reshape(-1, 1), filtered_data[filtered_data.cluster == i]['Y'].to_numpy().reshape(-1, 1)]
+        X1, Y1 = vet_coord[0], vet_coord[1]
+
+        dist = []
+        for k in range(len(X1) - 1):
+            arr = round(math.sqrt((X1[k+1] - X1[k])**2 + (Y1[k+1] - Y1[k])**2), 2)
+            dist.append(arr)
+        media_fio = max(set(dist), key=dist.count)
+        print(f"Media_Dist_Fio: {media_fio}")
+
         dict_fios.append({
             'Cluster': i,
             'Media_Dist': media_fio,
             'Score_Fio': score_fio,
             'OVERALL': 0
         })
-
     for cluster in dict_fios:
-        if(cluster["Media_Dist"] > 0.35):
-            cluster["OVERALL"] += 100
+        test_data = filtered_data[filtered_data.cluster == cluster['Cluster']]
+        maior_z = test_data['Z'].loc[test_data['Z'].idxmax()]
+        maior_y = test_data.loc[test_data['Z'] == test_data['Z'].loc[test_data['Z'].idxmax()]].iloc[0]['Y']
+        if (maior_y > 10) and (maior_z > 3):
+            overall = 100
+        elif ((maior_y > 5) and (maior_y < 10)) and (maior_z > 2):
+            overall = 80
+        elif ((maior_y > 2) and (maior_y < 5)) and (maior_z > 1):
+            overall = 60
         else:
-            cluster["OVERALL"] = -1
+            overall = 40
+ 
+        if(cluster["Media_Dist"] > 0.35):
+            cluster["OVERALL"] += 100 + cluster["Media_Dist"] + overall
+        else:
+            cluster["OVERALL"] = cluster["Media_Dist"] + overall
         potenciais_fios.append(cluster)
-        #print(yaml.dump(cluster, default_flow_style=False))
+        print(f"OVERALL FIO: {cluster['OVERALL']}")
 
     potenciais_fios = sorted(potenciais_fios, key=lambda d: d['OVERALL'], reverse = True)
-    #for fio in potenciais_fios:
-    #    print(yaml.dump(fio, default_flow_style=False))
     max_index = potenciais_fios[0]['Cluster']
+    maior_z = filtered_data['Z'].loc[filtered_data['Z'].idxmax()]
+    maior_y = filtered_data.loc[filtered_data['Z'] == filtered_data['Z'].loc[filtered_data['Z'].idxmax()]].iloc[0]['Y']
+    print(f"Media_Dist do Fio: {dict_fios[max_index]['Media_Dist']}")
     return filtered_data[filtered_data.cluster == max_index], potenciais_fios
 
 def main(path, quadrante):
@@ -456,10 +319,10 @@ def main(path, quadrante):
     new_data = new_data[new_data.Y < 19]
     new_data = new_data[new_data.X > 0]
     new_data = new_data[new_data.X < 25]
-    new_data = new_data[new_data.Z > -2]
     #########################################################
     #-------------------1º Kmeans----------------------------
     processed_data = getQuadrante(new_data, quadrante)
+    processed_data = filtro_arvore(new_data)
     filtered_data = filtro(processed_data)
     filtered_data = kmeans(filtered_data, N_CLUSTERS = 2)
     filtered_data, potenciais_fios = testa_fios(filtered_data.copy())
@@ -467,51 +330,30 @@ def main(path, quadrante):
     #########################################################
     #-------------------2º Kmeans----------------------------
     try:
-        processed_data = kmeans(processed_data, N_CLUSTERS = 16)
+        processed_data = kmeans(processed_data, N_CLUSTERS = 15)
     except Exception as e:
         print('xxxxxxxxxxxxxxxxxxxxx[main]xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx')
         print(f"Sem dados processados: {e}")
         print('xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx')
     #########################################################
-    #--------------------3º Kmeans---------------------------
-    try:
-        if(filtered_data.shape[0] > 0):
-            if(len(filtered_data) < 4):
-                print(f"Sem fios no quadrante da árvore!")
-                print('---------------------------------------------------------')
-            else:
-                filtered_data = kmeans(filtered_data, N_CLUSTERS = 16)
-        else:
-            print('xxxxxxxxxxxxxxxxxxxxx[main]xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx')
-            print(f"Sem dados filtrados!")
-            print('xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx')
-    except Exception as e:
-        print('xxxxxxxxxxxxxxxxxxxxx[main]xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx')
-        print(f"Sem dados filtrados: {e}")
-        print('xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx')
-    soma10(new_data.copy(), filtered_data.copy())
     #-------------------------Cálculos-----------------------
-    max_index, score_arvore = testa_arvores(processed_data.copy())   
-
+    max_index, score_arvore = testa_arvores(processed_data.copy(), filtered_data.copy()) 
+    if max_index == -1:
+        return 0, 0, 0, 0, 0  
     print('---------------------[main]------------------------------')
     print(f"-> Cluster Selecionado: {max_index}")
     print('---------------------------------------------------------')
-    soma10(new_data.copy(), processed_data[processed_data.cluster == max_index].copy())
 
     frames = [processed_data[processed_data.cluster == max_index].copy(), filtered_data]
     df = pd.concat(frames)
+    soma10(new_data.copy(), filtered_data.copy())
+    soma10(new_data.copy(), processed_data[processed_data.cluster == max_index].copy())
     soma10(new_data.copy(), df.copy())
     
     try:
-        distancia = getDistancia(processed_data, max_index)
-        altura = getAltura(processed_data, max_index)
-        try:
-            contato = dist_compare(filtered_data, processed_data, max_index)
-            print(f'Distância de contato entre a árvore e o fio: {contato:.2f} metros.')
-        except:
-            print('xxxxxxxxxxxxxxxxxxxxx[main]xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx')
-            print('Sem fios detectados na captura!')
-            print('xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx')
+        distancia, altura = getDistancia(processed_data, max_index), getAltura(processed_data, max_index)
+        contato = dist_compare(filtered_data, processed_data, max_index)
+        print(f'Distância de contato entre a árvore e o fio: {contato:.2f} metros.')
     except Exception as e:
         print('xxxxxxxxxxxxxxxxxxxxx[main]xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx')
         print(f"Sem dados no quadrante: {e}")
